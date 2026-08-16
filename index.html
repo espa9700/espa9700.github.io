@@ -39,22 +39,56 @@
     ::-webkit-scrollbar-thumb:hover { background: #475569; }
     .modal-backdrop { background-color: rgba(15, 23, 42, 0.85); backdrop-filter: blur(6px); }
 
-    /* CSS de Impresión para Factura Limpia */
     @media print {
-      body * { visibility: hidden; }
-      #invoice-container, #invoice-container * { visibility: visible; }
-      #invoice-container {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        margin: 0;
-        padding: 20px;
-        background: #ffffff !important;
-        color: #000000 !important;
-      }
-      .no-print { display: none !important; }
-    }
+  /* Ocultar la app general pero dejar fluir el contenedor */
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  /* Ocultar todo lo que NO sea la factura */
+  body > *:not(#invoice-container) {
+    display: none !important;
+  }
+
+  /* Mostrar y dar formato al contenedor de la factura */
+  #invoice-container {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  #invoice-container * {
+    visibility: visible !important;
+  }
+
+  /* Estructuras internas de la factura */
+  #invoice-container table {
+    display: table !important;
+    width: 100% !important;
+  }
+  #invoice-container tr {
+    display: table-row !important;
+  }
+  #invoice-container td, 
+  #invoice-container th {
+    display: table-cell !important;
+  }
+  #invoice-container .flex {
+    display: flex !important;
+  }
+  #invoice-container .grid {
+    display: grid !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+}
   </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans antialiased pb-20 md:pb-0 select-none">
