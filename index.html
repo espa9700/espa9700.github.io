@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Importrebel - Sistema ERP / CRM</title>
   <style>
-    /* VARIABLES Y TEMA TIPO DASHBOARD */
+    /* VARIABLES ERP IMPORTREBEL */
     :root {
       --bg-dark: #0f172a;
       --card-bg: #1e293b;
@@ -13,9 +13,7 @@
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
       --primary-blue: #3b82f6;
-      --primary-blue-hover: #2563eb;
       --whatsapp-green: #25d366;
-      --whatsapp-hover: #1ebd56;
       --danger-red: #ef4444;
       --warning-yellow: #f59e0b;
     }
@@ -29,211 +27,137 @@
     body {
       background-color: var(--bg-dark);
       color: var(--text-main);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-      padding: 24px 16px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding: 20px;
     }
 
     .container {
-      max-width: 900px;
+      max-width: 1000px;
       margin: 0 auto;
     }
 
-    /* CONTROLES Y BOTONES */
-    .actions-bar {
+    /* BARRA DE TASA Y CABECERA */
+    .header-bar {
       display: flex;
-      gap: 12px;
-      justify-content: flex-end;
-      margin-bottom: 20px;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-color);
     }
 
-    .btn {
+    /* TABLA DE VENTAS (POS) */
+    .table-container {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 30px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    th, td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border-color);
+      font-size: 14px;
+    }
+
+    th {
+      color: var(--text-muted);
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+
+    .badge-pending {
+      background-color: rgba(245, 158, 11, 0.2);
+      color: var(--warning-yellow);
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-weight: bold;
+      font-size: 12px;
+    }
+
+    /* BOTONES DE ACCIÓN EN TABLA */
+    .action-btn {
+      background: transparent;
+      border: none;
+      padding: 6px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 4px;
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      padding: 10px 18px;
-      border: none;
-      border-radius: 6px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      color: #ffffff;
-      text-decoration: none;
+      justify-content: center;
     }
 
-    .btn-print {
-      background-color: var(--primary-blue);
-    }
-    .btn-print:hover {
-      background-color: var(--primary-blue-hover);
-    }
+    .btn-factura { background-color: rgba(59, 130, 246, 0.2); color: var(--primary-blue); }
+    .btn-whatsapp { background-color: rgba(37, 211, 102, 0.2); color: var(--whatsapp-green); }
+    .btn-delete { background-color: rgba(239, 68, 68, 0.2); color: var(--danger-red); }
 
-    .btn-whatsapp {
-      background-color: var(--whatsapp-green);
-    }
-    .btn-whatsapp:hover {
-      background-color: var(--whatsapp-hover);
-    }
+    .action-btn:hover { filter: brightness(1.2); }
 
-    /* TARJETA FACTURA EN PANTALLA */
+    /* MODAL Y VISTA DE FACTURA */
     .invoice-card {
       background-color: var(--card-bg);
       border: 1px solid var(--border-color);
       border-radius: 12px;
-      padding: 32px;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+      padding: 24px;
+      max-width: 600px;
+      margin: 0 auto;
     }
 
-    .invoice-header {
+    .invoice-actions {
       display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      border-bottom: 1px solid var(--border-color);
-      padding-bottom: 20px;
-      margin-bottom: 20px;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-bottom: 16px;
     }
 
-    .brand-title {
-      font-size: 24px;
-      font-weight: 800;
-      color: var(--text-main);
-      letter-spacing: -0.5px;
+    .btn {
+      padding: 8px 16px;
+      border-radius: 6px;
+      border: none;
+      font-weight: bold;
+      cursor: pointer;
+      color: #fff;
     }
+    .btn-blue { background-color: var(--primary-blue); }
+    .btn-green { background-color: var(--whatsapp-green); }
 
-    .invoice-tag {
-      font-size: 14px;
-      color: var(--text-muted);
-      text-align: right;
-    }
-
-    .invoice-tag span {
-      display: block;
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--primary-blue);
-    }
-
-    .info-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      margin-bottom: 24px;
-    }
-
-    .info-box p {
-      color: var(--text-muted);
-      font-size: 13px;
-      margin-bottom: 4px;
-    }
-
-    .info-box strong {
-      color: var(--text-main);
-      font-size: 15px;
-    }
-
-    /* TABLA RESUMEN */
-    .invoice-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 24px;
-    }
-
-    .invoice-table th, 
-    .invoice-table td {
-      padding: 12px 16px;
-      text-align: left;
-      border-bottom: 1px solid var(--border-color);
-    }
-
-    .invoice-table th {
-      color: var(--text-muted);
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .totals-container {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: 8px;
-      border-top: 2px solid var(--border-color);
-      padding-top: 16px;
-    }
-
-    .total-row {
-      display: flex;
-      justify-content: space-between;
-      width: 260px;
-      font-size: 14px;
-      color: var(--text-muted);
-    }
-
-    .total-row.highlight {
-      font-size: 16px;
-      font-weight: 700;
-      color: var(--warning-yellow);
-      padding-top: 8px;
-      border-top: 1px dashed var(--border-color);
-    }
-
-    /* CONFIGURACIÓN EXACTA PARA IMPRESIÓN Y EXPORTACIÓN PDF */
+    /* REGLAS EXPLICITAS PARA IMPRESIÓN Y PDF (FONDO BLANCO Y TEXTO NEGRO) */
     @media print {
       @page {
-        size: A4 portrait;
-        margin: 15mm;
+        margin: 10mm;
       }
 
       body {
         background-color: #ffffff !important;
         color: #000000 !important;
         padding: 0 !important;
-        font-size: 12pt;
       }
 
-      .no-print {
+      .no-print, .table-container, .header-bar, .invoice-actions {
         display: none !important;
-      }
-
-      .container {
-        max-width: 100% !important;
-        margin: 0 !important;
       }
 
       .invoice-card {
         background-color: #ffffff !important;
+        color: #000000 !important;
         border: none !important;
         box-shadow: none !important;
+        width: 100% !important;
+        max-width: 100% !important;
         padding: 0 !important;
+      }
+
+      .invoice-card *, th, td, strong, span, p, h1, h2, h3 {
         color: #000000 !important;
-      }
-
-      .brand-title {
-        color: #000000 !important;
-      }
-
-      .invoice-tag span {
-        color: #000000 !important;
-      }
-
-      .invoice-header,
-      .invoice-table th,
-      .invoice-table td,
-      .totals-container,
-      .total-row.highlight {
-        border-color: #cbd5e1 !important;
-      }
-
-      .info-box p,
-      .invoice-table th,
-      .total-row {
-        color: #475569 !important;
-      }
-
-      .info-box strong,
-      .invoice-table td,
-      .total-row.highlight {
-        color: #000000 !important;
+        border-color: #cccccc !important;
       }
     }
   </style>
@@ -241,111 +165,116 @@
 <body>
 
   <div class="container">
-    <!-- Botones de Acción (Se ocultan al imprimir/guardar PDF) -->
-    <div class="actions-bar no-print">
-      <button class="btn btn-print" onclick="window.print()">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="6 9 6 2 18 2 18 9"></polyline>
-          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
-          <rect x="6" y="14" width="12" height="8"></rect>
-        </svg>
-        Imprimir / Guardar PDF
-      </button>
-
-      <button class="btn btn-whatsapp" onclick="enviarRecordatorioWhatsApp()">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.842-1.001z"/>
-        </svg>
-        Enviar Recordatorio WhatsApp
-      </button>
+    
+    <!-- CABECERA -->
+    <div class="header-bar no-print">
+      <h2>Ventas y Punto de Venta (POS)</h2>
+      <div>Tasa: <strong>1 USD = 771.07 Bs</strong></div>
     </div>
 
-    <!-- Factura Estructurada -->
-    <div class="invoice-card" id="factura">
-      <div class="invoice-header">
-        <div>
-          <h1 class="brand-title">Importrebel</h1>
-          <p style="color: var(--text-muted); font-size: 13px; margin-top: 2px;">Sistema ERP / CRM</p>
-        </div>
-        <div class="invoice-tag">
-          COMPROBANTE DE VENTA
-          <span id="txt-id-venta">#VNT-317434</span>
-        </div>
-      </div>
-
-      <div class="info-grid">
-        <div class="info-box">
-          <p>Cliente</p>
-          <strong id="txt-cliente">Jefferson</strong>
-        </div>
-        <div class="info-box" style="text-align: right;">
-          <p>Estado del Pago</p>
-          <strong style="color: var(--warning-yellow);">PENDIENTE</strong>
-        </div>
-      </div>
-
-      <table class="invoice-table">
+    <!-- TABLA DE VENTAS CON BOTÓN DE WHATSAPP INTEGRADO -->
+    <div class="table-container no-print">
+      <table>
         <thead>
           <tr>
-            <th>Descripción</th>
-            <th style="text-align: right;">Monto (USD)</th>
+            <th>ID / FECHA</th>
+            <th>CLIENTE</th>
+            <th>TOTAL ($)</th>
+            <th>ABONADO / DEUDA</th>
+            <th>ESTADO</th>
+            <th>ACCIONES</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td>Compra de mercancía / Orden VNT-317434</td>
-            <td style="text-align: right;" id="txt-monto-total">$40.00</td>
+            <td><strong>#VNT-317434</strong></td>
+            <td>jefferson esparragoza</td>
+            <td>$40.00</td>
+            <td>Abonado: $10.00</td>
+            <td><span class="badge-pending">PENDING</span></td>
+            <td>
+              <!-- Botón Ver/Imprimir Factura -->
+              <button class="action-btn btn-factura" title="Ver Factura" onclick="window.print()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+              </button>
+              
+              <!-- Botón Recordatorio WhatsApp -->
+              <button class="action-btn btn-whatsapp" title="Enviar WhatsApp" onclick="enviarWhatsApp()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.842-1.001z"/></svg>
+              </button>
+
+              <!-- Botón Eliminar -->
+              <button class="action-btn btn-delete" title="Eliminar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- BOTONES PRINCIPALES DE LA FACTURA -->
+    <div class="invoice-actions no-print">
+      <button class="btn btn-blue" onclick="window.print()">Imprimir / PDF</button>
+      <button class="btn btn-green" onclick="enviarWhatsApp()">Enviar Recordatorio WhatsApp</button>
+    </div>
+
+    <!-- VISTA DE FACTURA COMPROBANTE -->
+    <div class="invoice-card" id="factura">
+      <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px;">
+        <h2>Importrebel</h2>
+        <span>#VNT-317434</span>
+      </div>
+
+      <p><strong>Cliente:</strong> jefferson esparragoza</p>
+      <p><strong>Teléfono:</strong> 584141511026</p>
+      
+      <table style="margin: 20px 0;">
+        <thead>
+          <tr>
+            <th>CONCEPTO</th>
+            <th style="text-align: right;">TOTAL</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Compra VNT-317434</td>
+            <td style="text-align: right;">$40.00 USD</td>
           </tr>
         </tbody>
       </table>
 
-      <div class="totals-container">
-        <div class="total-row">
-          <span>Monto Total:</span>
-          <strong id="lbl-total">$40.00 USD</strong>
-        </div>
-        <div class="total-row">
-          <span>Abonado:</span>
-          <strong id="lbl-abonado">$10.00 USD</strong>
-        </div>
-        <div class="total-row highlight">
-          <span>Saldo Restante:</span>
-          <strong id="lbl-saldo">$30.00 USD</strong>
-        </div>
-        <div class="total-row" style="font-size: 12px; margin-top: 4px;">
-          <span>Equivalente en Bs:</span>
-          <strong id="lbl-saldo-bs">23,132.14 Bs</strong>
-        </div>
+      <div style="text-align: right; border-top: 1px solid var(--border-color); padding-top: 12px;">
+        <p>Monto Total: <strong>$40.00 USD</strong></p>
+        <p>Abonado: <strong>$10.00 USD</strong></p>
+        <p style="font-size: 16px; margin-top: 6px;">Saldo Restante: <strong style="color: var(--warning-yellow);">$30.00 USD</strong></p>
+        <p style="font-size: 12px; color: var(--text-muted);">(23,132.14 Bs)</p>
       </div>
     </div>
+
   </div>
 
   <script>
-    // Objeto centralizado de la transacción
-    const datosCliente = {
-      nombre: "Jefferson",
-      telefono: "584141511026", // Código de país + número sin espacios ni símbolos
-      numeroCompra: "VNT-317434",
-      montoTotal: 40.00,
-      abonado: 10.00,
-      saldoPendienteUSD: 30.00,
-      saldoPendienteBS: "23132.14"
+    // Datos de la transacción
+    const venta = {
+      cliente: "jefferson esparragoza",
+      telefono: "584141511026",
+      idVenta: "VNT-317434",
+      totalUSD: 40.00,
+      abonadoUSD: 10.00,
+      saldoUSD: 30.00,
+      saldoBS: "23132.14"
     };
 
-    // Función para enviar mensaje por WhatsApp con saltos de línea y negritas nativas
-    function enviarRecordatorioWhatsApp() {
+    // Función enviadora con saltos de línea e integración directa a WhatsApp
+    function enviarWhatsApp() {
       const mensaje = 
-        `Hola *${datosCliente.nombre}*, te saludamos de *Importrebel*.\n\n` +
-        `Le recordamos que tiene un saldo pendiente de *$${datosCliente.saldoPendienteUSD.toFixed(2)} USD* (${datosCliente.saldoPendienteBS} Bs) correspondiente a su compra *#${datosCliente.numeroCompra}*.\n\n` +
-        `Monto Total: $${datosCliente.montoTotal.toFixed(2)}\n` +
-        `Abonado: $${datosCliente.abonado.toFixed(2)}\n` +
-        `Saldo Restante: $${datosCliente.saldoPendienteUSD.toFixed(2)}\n\n` +
+        `Hola *${venta.cliente}*, te saludamos de *Importrebel*. Le recordamos que tiene un saldo pendiente de *$${venta.saldoUSD.toFixed(2)} USD* (${venta.saldoBS} Bs) correspondiente a su compra *#${venta.idVenta}*.\n\n` +
+        `Monto Total: $${venta.totalUSD.toFixed(2)}\n` +
+        `Abonado: $${venta.abonadoUSD.toFixed(2)}\n` +
+        `Saldo Restante: $${venta.saldoUSD.toFixed(2)}\n\n` +
         `¡Quedamos atentos a su reporte de pago!`;
 
-      // encodeURIComponent preserva los saltos de línea (\n) convirtiéndolos a %0A
-      const urlWhatsApp = `https://api.whatsapp.com/send?phone=${datosCliente.telefono}&text=${encodeURIComponent(mensaje)}`;
-      
-      window.open(urlWhatsApp, '_blank');
+      const url = `https://api.whatsapp.com/send?phone=${venta.telefono}&text=${encodeURIComponent(mensaje)}`;
+      window.open(url, '_blank');
     }
   </script>
 </body>
