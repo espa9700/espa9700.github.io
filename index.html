@@ -40,11 +40,7 @@
     .modal-backdrop { background-color: rgba(15, 23, 42, 0.85); backdrop-filter: blur(6px); }
 
     @media print {
-  /* Quitar márgenes de la página impresa */
-  @page {
-    margin: 0;
-  }
-
+  /* Reseteo básico de la página y el cuerpo */
   body {
     background: #ffffff !important;
     color: #000000 !important;
@@ -52,20 +48,18 @@
     padding: 0 !important;
   }
 
-  /* Ocultar elementos fuera de la factura */
+  /* Ocultar todos los contenedores directos fuera de la factura */
   body > *:not(#invoice-container) {
     display: none !important;
   }
 
-  /* Subir la factura al borde superior de la página */
+  /* Asegurar flujo normal del contenedor de la factura */
   #invoice-container {
     display: block !important;
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
+    position: relative !important;
     width: 100% !important;
     margin: 0 !important;
-    padding: 20px !important; /* Ajusta el relleno interno si lo necesitas */
+    padding: 0 !important;
     background: #ffffff !important;
     color: #000000 !important;
   }
@@ -74,7 +68,7 @@
     visibility: visible !important;
   }
 
-  /* Mantener estructura interna */
+  /* Estructuras internas */
   #invoice-container table {
     display: table !important;
     width: 100% !important;
