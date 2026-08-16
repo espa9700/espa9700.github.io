@@ -40,57 +40,36 @@
     .modal-backdrop { background-color: rgba(15, 23, 42, 0.85); backdrop-filter: blur(6px); }
 
     @media print {
-  /* Reseteo básico de la página y el cuerpo */
-  body {
-    background: #ffffff !important;
-    color: #000000 !important;
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-
-  /* Ocultar todos los contenedores directos fuera de la factura */
-  body > *:not(#invoice-container) {
-    display: none !important;
-  }
-
-  /* Asegurar flujo normal del contenedor de la factura */
-  #invoice-container {
-    display: block !important;
-    position: relative !important;
-    width: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    background: #ffffff !important;
-    color: #000000 !important;
-  }
-
-  #invoice-container * {
-    visibility: visible !important;
-  }
-
-  /* Estructuras internas */
-  #invoice-container table {
-    display: table !important;
-    width: 100% !important;
-  }
-  #invoice-container tr {
-    display: table-row !important;
-  }
-  #invoice-container td, 
-  #invoice-container th {
-    display: table-cell !important;
-  }
-  #invoice-container .flex {
-    display: flex !important;
-  }
-  #invoice-container .grid {
-    display: grid !important;
-  }
-
-  .no-print {
-    display: none !important;
-  }
-}
+      body * {
+        visibility: hidden !important;
+      }
+      #modal-invoice, 
+      #modal-invoice * {
+        visibility: visible !important;
+      }
+      #modal-invoice {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        height: auto !important;
+        background: #ffffff !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        display: block !important;
+      }
+      #invoice-card-wrapper {
+        box-shadow: none !important;
+        border: none !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+    }
   </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans antialiased pb-20 md:pb-0 select-none">
@@ -494,9 +473,9 @@
     </div>
   </div>
 
-  <!-- MODAL DE FACTURA PROFESIONAL (NUEVO DISEÑO ELEGANTE) -->
+  <!-- MODAL DE FACTURA PROFESIONAL (ESTRUCTURA DE IMPRESIÓN OPTIMIZADA) -->
   <div id="modal-invoice" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop hidden overflow-y-auto">
-    <div class="bg-white text-slate-900 rounded-2xl w-full max-w-xl p-6 sm:p-8 shadow-2xl relative my-8">
+    <div id="invoice-card-wrapper" class="bg-white text-slate-900 rounded-2xl w-full max-w-xl p-6 sm:p-8 shadow-2xl relative my-8">
       <div class="no-print absolute top-4 right-4 flex items-center gap-2">
         <button onclick="window.print()" class="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-slate-900 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow">
           <i data-lucide="printer" class="w-4 h-4"></i> Imprimir / PDF
@@ -579,7 +558,6 @@
     </div>
   </div>
 
-  <!-- MODALES EXISTENTES INTÁCTOS -->
   <!-- MODAL DE PRODUCTO -->
   <div id="modal-product" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop hidden">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-xl p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
@@ -721,7 +699,7 @@
     </div>
   </div>
 
-  <!-- SCRIPT BASE CON MANTENIMIENTO TOTAL DE LÓGICA + IMPRESIÓN DE FACTURA -->
+  <!-- SCRIPT BASE CON MANTENIMIENTO TOTAL DE LÓGICA -->
   <script>
     let SUPABASE_URL = localStorage.getItem('IMPORTREBEL_SUPABASE_URL') || '';
     let SUPABASE_ANON_KEY = localStorage.getItem('IMPORTREBEL_SUPABASE_KEY') || '';
@@ -776,7 +754,7 @@
       } else {
         currentUser = null;
         updateAuthButtonState(false);
-loadLocalFallbackData();
+        loadLocalFallbackData();
       }
 
       supabaseClient.auth.onAuthStateChange(async (event, session) => {
@@ -1360,7 +1338,7 @@ loadLocalFallbackData();
       }
 
       tbody.innerHTML = sales.map(v => {
-        const client = db.clientes.find(c => c.id === v.cliente_id) || { nombre: 'Cliente', apellido: 'Eliminado', telefono: '' };
+        const client = db.clientes.find(c => c.id === v.cliente_id) || { nombre: 'Cliente', apellido: 'General', telefono: '' };
         return `
           <tr class="hover:bg-slate-700/30 transition">
             <td class="px-4 py-3 font-bold text-white">#${v.id}</td>
