@@ -1093,6 +1093,7 @@
       const tbody = document.getElementById('inventory-table-body');
       if (!tbody) return;
 
+      // CORREGIDO: Se usa la variable 'filtered' sin modificar 'db.productos' directamente
       const filtered = db.productos.filter(p => p.nombre.toLowerCase().includes(query) || p.sku.toLowerCase().includes(query));
 
       if (filtered.length === 0) {
