@@ -1327,6 +1327,7 @@
 
       tbody.innerHTML = sales.map(v => {
         const client = db.clientes.find(c => c.id === v.cliente_id) || { nombre: 'Cliente', apellido: 'General', telefono: '' };
+        const isPending = v.estado === 'PENDING';
         return `
           <tr class="hover:bg-slate-700/30 transition">
             <td class="px-4 py-3 font-bold text-white">#${v.id}</td>
@@ -1336,6 +1337,7 @@
             <td class="px-4 py-3 text-xs text-slate-300">Abonado: $${parseFloat(v.abonado_usd).toFixed(2)}</td>
             <td class="px-4 py-3 font-bold text-xs ${v.estado === 'COMPLETED' ? 'text-emerald-400' : 'text-amber-400'}">${v.estado}</td>
             <td class="px-4 py-3 text-right space-x-1">
+              ${isPending ? `<button onclick="sendWhatsAppReminder('${v.id}')" title="Enviar recordatorio WhatsApp" class="p-1.5 bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 rounded transition"><i data-lucide="message-circle" class="w-4 h-4"></i></button>` : ''}
               <button onclick="printInvoice('${v.id}')" title="Ver Factura" class="p-1.5 bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 rounded transition"><i data-lucide="file-text" class="w-4 h-4"></i></button>
               <button onclick="deleteSale('${v.id}')" title="Eliminar Venta" class="p-1.5 bg-rose-500/20 text-rose-400 hover:bg-rose-500/30 rounded transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
             </td>
@@ -1343,6 +1345,32 @@
         `;
       }).join('');
       lucide.createIcons();
+    };
+
+    window.sendWhatsAppReminder = function(saleId) {
+      const sale = db.ventas.find(v => v.id === saleId);
+      if (!sale) return;
+
+      const client = db.clientes.find(c => c.id === sale.cliente_id) || { nombre: 'Cliente', telefono: '' };
+      let phone = (client.telefono || '').replace(/\D/g, '');
+
+      if (!phone) {
+        alert("El cliente no tiene un número de teléfono registrado.");
+        return;
+      }
+
+      const total = parseFloat(sale.total_usd || 0);
+      const abonado = parseFloat(sale.abonado_usd || 0);
+      const deuda = parseFloat(sale.deuda_usd || (total - abonado));
+
+      const message = `Hola ${client.nombre}, te saludamos de *Importrebel*. ` +
+        `Recordatorio sobre tu compra *#${sale.id}*: ` +
+        `Monto total: $${total.toFixed(2)}, Abonado: $${abonado.toFixed(2)}. ` +
+        `Saldo pendiente: *$${deuda.toFixed(2)}*. ` +
+        `¿Cuándo te gustaría programar el pago restante? ¡Gracias!`;
+
+      const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+      window.open(url, '_blank');
     };
 
     window.filterSales = function(filter) {
