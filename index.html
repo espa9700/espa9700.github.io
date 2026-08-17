@@ -1066,15 +1066,25 @@
       reader.readAsText(file);
     };
 
-    // EXPORTACIÓN A EXCEL (.XLSX) MULTI-VENTAS
+    // EXPORTACIÓN A EXCEL (.XLSX) MULTI-VENTAS CON DETALLE COMPLETO Y MÚLTIPLES HOJAS
     window.exportSalesExcel = function() {
       if (db.ventas.length === 0) { alert("No hay ventas para exportar."); return; }
       
       const salesData = db.ventas.map(v => {
         const client = db.clientes.find(c => c.id === v.cliente_id) || { nombre: 'Cliente', apellido: 'General' };
+        
+        const itemsList = (v.items_json || []).map(item => {
+          const prod = db.productos.find(p => p.id === item.producto_id) || { nombre: 'Producto General' };
+          const price = parseFloat(item.precio_unitario || item.precio || 0);
+          const qty = parseInt(item.cantidad || 1);
+          return `${prod.nombre} (x${qty} @ $${price.toFixed(2)})`;
+        }).join('; ');
+
         return {
           ID_Factura: v.id,
+          Fecha: v.fecha || new Date().toISOString().slice(0,10),
           Cliente: `${client.nombre} ${client.apellido}`,
+          Detalle_Productos: itemsList,
           Total_USD: parseFloat(v.total_usd),
           Total_VES: parseFloat((v.total_usd * currentRate).toFixed(2)),
           Abonado_USD: parseFloat(v.abonado_usd),
@@ -1083,9 +1093,35 @@
         };
       });
 
-      const worksheet = XLSX.utils.json_to_sheet(salesData);
+      const detailedItemsData = [];
+      db.ventas.forEach(v => {
+        const client = db.clientes.find(c => c.id === v.cliente_id) || { nombre: 'Cliente', apellido: 'General' };
+        (v.items_json || []).forEach(item => {
+          const prod = db.productos.find(p => p.id === item.producto_id) || { nombre: 'Producto General', sku: 'N/A' };
+          const price = parseFloat(item.precio_unitario || item.precio || 0);
+          const qty = parseInt(item.cantidad || 1);
+          detailedItemsData.push({
+            ID_Factura: v.id,
+            Fecha: v.fecha || new Date().toISOString().slice(0,10),
+            Cliente: `${client.nombre} ${client.apellido}`,
+            SKU: prod.sku,
+            Producto: prod.nombre,
+            Cantidad: qty,
+            Precio_Unitario_USD: price,
+            Subtotal_USD: price * qty,
+            Subtotal_VES: (price * qty * currentRate)
+          });
+        });
+      });
+
       const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Ventas");
+
+      const worksheetSales = XLSX.utils.json_to_sheet(salesData);
+      XLSX.utils.book_append_sheet(workbook, worksheetSales, "Resumen Ventas");
+
+      const worksheetDetails = XLSX.utils.json_to_sheet(detailedItemsData);
+      XLSX.utils.book_append_sheet(workbook, worksheetDetails, "Detalle Items");
+
       XLSX.writeFile(workbook, `Ventas_Importrebel_${new Date().toISOString().slice(0,10)}.xlsx`);
     };
 
@@ -1600,16 +1636,14 @@
       }
 
       saleCart = [];
+      document.getElementById('form-sale').reset();
       
-      // Llenar Select Clientes
       const clientSelect = document.getElementById('sale-client-select');
       clientSelect.innerHTML = db.clientes.map(c => `<option value="${c.id}">${c.nombre} ${c.apellido} (${c.telefono})</option>`).join('');
 
-      // Llenar Select Productos
       const prodSelect = document.getElementById('sale-product-select');
-      prodSelect.innerHTML = db.productos.map(p => `<option value="${p.id}">${p.nombre} - Stock: ${p.stock} ($${parseFloat(p.precio_venta).toFixed(2)})</option>`).join('');
+      prodSelect.innerHTML = db.productos.map(p => `<option value="${p.id}">${p.nombre} - $${p.precio_venta.toFixed(2)} (Stock: ${p.stock})</option>`).join('');
 
-      document.getElementById('sale-paid-amount').value = 0;
       renderSaleCart();
       openModal('modal-sale');
     };
@@ -1617,34 +1651,34 @@
     window.addProductToSaleCart = function() {
       const prodId = document.getElementById('sale-product-select').value;
       const qty = parseInt(document.getElementById('sale-product-qty').value) || 1;
-      
       const prod = db.productos.find(p => p.id === prodId);
-      if (!prod) return;
 
+      if (!prod) return;
       if (qty > prod.stock) {
-        alert(`Stock insuficiente. Solo quedan ${prod.stock} unidades de ${prod.nombre}.`);
+        alert(`Stock insuficiente. Solo quedan ${prod.stock} unidades disponibles.`);
         return;
       }
 
-      const existingIndex = saleCart.findIndex(i => i.producto_id === prodId);
-      if (existingIndex >= 0) {
-        if (saleCart[existingIndex].cantidad + qty > prod.stock) {
-          alert(`No puedes agregar más unidades que el stock disponible (${prod.stock}).`);
+      const existingCartIndex = saleCart.findIndex(item => item.producto_id === prodId);
+      if (existingCartIndex >= 0) {
+        if (saleCart[existingCartIndex].cantidad + qty > prod.stock) {
+          alert(`No puedes agregar más unidades que las disponibles en stock (${prod.stock}).`);
           return;
         }
-        saleCart[existingIndex].cantidad += qty;
+        saleCart[existingCartIndex].cantidad += qty;
       } else {
         saleCart.push({
           producto_id: prod.id,
-          cantidad: qty,
-          precio_unitario: parseFloat(prod.precio_venta)
+          nombre: prod.nombre,
+          precio_unitario: prod.precio_venta,
+          cantidad: qty
         });
       }
 
       renderSaleCart();
     };
 
-    window.removeSaleCartItem = function(index) {
+    window.removeProductFromSaleCart = function(index) {
       saleCart.splice(index, 1);
       renderSaleCart();
     };
@@ -1654,23 +1688,17 @@
       if (!tbody) return;
 
       if (saleCart.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-slate-500">El carrito está vacío</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-slate-500">Ningún producto agregado al carrito</td></tr>`;
       } else {
-        tbody.innerHTML = saleCart.map((item, idx) => {
-          const prod = db.productos.find(p => p.id === item.producto_id) || { nombre: 'Producto' };
-          const subtotal = item.precio_unitario * item.cantidad;
-          return `
-            <tr>
-              <td class="py-2">${prod.nombre}</td>
-              <td class="py-2 text-center font-mono">${item.cantidad}</td>
-              <td class="py-2 text-right font-mono">$${item.precio_unitario.toFixed(2)}</td>
-              <td class="py-2 text-right font-mono font-bold">$${subtotal.toFixed(2)}</td>
-              <td class="py-2 text-right">
-                <button type="button" onclick="removeSaleCartItem(${idx})" class="text-rose-400 hover:text-rose-300 p-1"><i data-lucide="x" class="w-4 h-4"></i></button>
-              </td>
-            </tr>
-          `;
-        }).join('');
+        tbody.innerHTML = saleCart.map((item, idx) => `
+          <tr>
+            <td class="py-2">${item.nombre}</td>
+            <td class="py-2 text-center font-mono">${item.cantidad}</td>
+            <td class="py-2 text-right font-mono">$${item.precio_unitario.toFixed(2)}</td>
+            <td class="py-2 text-right font-mono font-bold text-emerald-400">$${(item.precio_unitario * item.cantidad).toFixed(2)}</td>
+            <td class="py-2 text-right"><button type="button" onclick="removeProductFromSaleCart(${idx})" class="text-rose-400 hover:text-rose-300"><i data-lucide="trash" class="w-3.5 h-3.5"></i></button></td>
+          </tr>
+        `).join('');
       }
 
       lucide.createIcons();
@@ -1678,7 +1706,7 @@
     }
 
     window.updateSaleCalculations = function() {
-      const totalUSD = saleCart.reduce((acc, item) => acc + (item.precio_unitario * item.cantidad), 0);
+      const totalUSD = saleCart.reduce((sum, item) => sum + (item.precio_unitario * item.cantidad), 0);
       const paidUSD = parseFloat(document.getElementById('sale-paid-amount').value) || 0;
       const debtUSD = Math.max(0, totalUSD - paidUSD);
 
@@ -1690,76 +1718,63 @@
     window.handleSaleSubmit = async function(e) {
       e.preventDefault();
       if (saleCart.length === 0) {
-        alert("Agrega al menos un producto al carrito para procesar la venta.");
+        alert("Debes agregar al menos un producto al carrito de venta.");
         return;
       }
 
-      const clienteId = document.getElementById('sale-client-select').value;
-      const totalUSD = saleCart.reduce((acc, item) => acc + (item.precio_unitario * item.cantidad), 0);
-      const paidUSD = parseFloat(document.getElementById('sale-paid-amount').value) || 0;
-      const debtUSD = Math.max(0, totalUSD - paidUSD);
-      const estado = debtUSD === 0 ? 'COMPLETED' : 'PENDING';
-      const saleId = 'VTA-' + Date.now().toString().slice(-6);
+      const cliente_id = document.getElementById('sale-client-select').value;
+      const total_usd = saleCart.reduce((sum, item) => sum + (item.precio_unitario * item.cantidad), 0);
+      const abonado_usd = parseFloat(document.getElementById('sale-paid-amount').value) || 0;
+      const deuda_usd = Math.max(0, total_usd - abonado_usd);
+      const estado = deuda_usd === 0 ? 'COMPLETED' : 'PENDING';
+      const saleId = 'VNT-' + Date.now().toString().slice(-6);
 
       const newSale = {
         id: saleId,
-        cliente_id: clienteId,
+        cliente_id,
         items_json: saleCart,
-        total_usd: totalUSD,
-        abonado_usd: Math.min(paidUSD, totalUSD),
-        deuda_usd: debtUSD,
-        estado: estado,
-        fecha: new Date().toISOString()
+        total_usd,
+        abonado_usd,
+        deuda_usd,
+        estado,
+        fecha: new Date().toISOString().slice(0, 10)
       };
 
-      // Descontar inventario
+      // Descontar stock
       saleCart.forEach(item => {
         const prod = db.productos.find(p => p.id === item.producto_id);
         if (prod) {
-          prod.stock -= item.cantidad;
+          prod.stock = Math.max(0, prod.stock - item.cantidad);
           syncUpdate('productos', prod.id, prod);
         }
       });
-
-      // Registrar abono inicial si abonó una cantidad mayor a 0
-      if (paidUSD > 0) {
-        const newAbono = {
-          id: 'ABO-' + Date.now(),
-          venta_id: saleId,
-          monto_usd: Math.min(paidUSD, totalUSD),
-          fecha: new Date().toISOString()
-        };
-        db.abonos.push(newAbono);
-        await syncInsert('abonos', newAbono);
-      }
 
       db.ventas.unshift(newSale);
       await syncInsert('ventas', newSale);
 
       closeModal('modal-sale');
       renderAll();
+      printInvoice(saleId);
     };
 
     window.deleteSale = async function(id) {
-      if (confirm('¿Eliminar esta venta? Se eliminarán sus abonos asociados.')) {
+      if (confirm('¿Eliminar registro de venta?')) {
         db.ventas = db.ventas.filter(v => v.id !== id);
-        db.abonos = db.abonos.filter(a => a.venta_id !== id);
         await syncDelete('ventas', id);
         renderAll();
       }
     };
 
-    // REGISTRAR ABONOS EN VENTAS
+    // ABONOS
     window.openPaymentModal = function(saleId) {
       const sale = db.ventas.find(v => v.id === saleId);
       if (!sale) return;
 
       document.getElementById('pay-sale-id').value = sale.id;
-      document.getElementById('pay-sale-info').innerText = `Venta #${sale.id} - Total: $${parseFloat(sale.total_usd).toFixed(2)}`;
+      document.getElementById('pay-sale-info').innerText = `Venta #${sale.id}`;
       document.getElementById('pay-current-debt').innerText = `$${parseFloat(sale.deuda_usd).toFixed(2)}`;
       document.getElementById('pay-current-paid').innerText = `$${parseFloat(sale.abonado_usd).toFixed(2)}`;
       document.getElementById('pay-amount').value = '';
-      document.getElementById('pay-amount').max = sale.deuda_usd;
 
       openModal('modal-payment');
     };
@@ -1767,109 +1782,55 @@
     window.handlePaymentSubmit = async function(e) {
       e.preventDefault();
       const saleId = document.getElementById('pay-sale-id').value;
-      const amountUSD = parseFloat(document.getElementById('pay-amount').value) || 0;
-
+      const amount = parseFloat(document.getElementById('pay-amount').value) || 0;
       const sale = db.ventas.find(v => v.id === saleId);
-      if (!sale) return;
 
-      if (amountUSD <= 0) {
-        alert("Ingrese un monto válido mayor a 0.");
-        return;
-      }
+      if (!sale || amount <= 0) return;
 
-      if (amountUSD > sale.deuda_usd) {
-        alert(`El monto abonado ($${amountUSD.toFixed(2)}) excede la deuda actual ($${parseFloat(sale.deuda_usd).toFixed(2)}).`);
-        return;
-      }
-
-      sale.abonado_usd = parseFloat(sale.abonado_usd) + amountUSD;
+      sale.abonado_usd = parseFloat(sale.abonado_usd) + amount;
       sale.deuda_usd = Math.max(0, parseFloat(sale.total_usd) - sale.abonado_usd);
       if (sale.deuda_usd === 0) sale.estado = 'COMPLETED';
 
-      const newAbono = {
-        id: 'ABO-' + Date.now(),
+      const abonoRecord = {
+        id: 'ABN-' + Date.now(),
         venta_id: saleId,
-        monto_usd: amountUSD,
-        fecha: new Date().toISOString()
+        monto_usd: amount,
+        fecha: new Date().toISOString().slice(0, 10)
       };
 
-      db.abonos.push(newAbono);
-      await syncInsert('abonos', newAbono);
-      await syncUpdate('ventas', saleId, sale);
+      db.abonos.push(abonoRecord);
+      await syncInsert('abonos', abonoRecord);
+      await syncUpdate('ventas', sale.id, sale);
 
       closeModal('modal-payment');
       renderAll();
     };
 
-    // ENVÍO DE RECORDATORIOS POR WHATSAPP
+    // REMINDS / WHATSAPP
     window.sendWhatsAppReminderSale = function(saleId) {
       const sale = db.ventas.find(v => v.id === saleId);
       if (!sale) return;
-
       const client = db.clientes.find(c => c.id === sale.cliente_id);
-      if (!client || !client.telefono) {
-        alert("El cliente no tiene un número de teléfono registrado.");
-        return;
-      }
+      if (!client || !client.telefono) { alert("El cliente no posee un número de teléfono registrado."); return; }
 
-      const debtBs = (parseFloat(sale.deuda_usd) * currentRate).toFixed(2);
-      const cleanPhone = client.telefono.replace(/\D/g, '');
-
-      const message = `Hola ${client.nombre}, te saludamos de *Importrebel*. 👋\n\nTe recordamos que tienes un saldo pendiente correspondiente a la venta *#${sale.id}*.\n\n📌 *Detalles del Pago:*\n• Total Venta: *$${parseFloat(sale.total_usd).toFixed(2)}*\n• Monto Abonado: *$${parseFloat(sale.abonado_usd).toFixed(2)}*\n• *Saldo Pendiente:* *$${parseFloat(sale.deuda_usd).toFixed(2)}* (aprox. *${debtBs} Bs* al cambio actual: ${currentRate.toFixed(2)} Bs/$).\n\nAgradecemos tu atención. Quedamos a tu disposición para coordinar el pago. ¡Muchas gracias!`;
-
-      window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`, '_blank');
+      const debtBs = (sale.deuda_usd * currentRate).toFixed(2);
+      const text = `Hola ${client.nombre}, un saludo de Importrebel. Te recordamos tu saldo pendiente de $${parseFloat(sale.deuda_usd).toFixed(2)} (${debtBs} Bs a la tasa oficial de ${currentRate.toFixed(2)} Bs/$) de la factura #${sale.id}. ¡Gracias!`;
+      window.open(`https://wa.me/${client.telefono.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(text)}`, '_blank');
     };
 
     window.sendWhatsAppReminderCustomer = function(customerId) {
       const client = db.clientes.find(c => c.id === customerId);
-      if (!client || !client.telefono) {
-        alert("El cliente no tiene un número de teléfono registrado.");
-        return;
-      }
+      if (!client || !client.telefono) return;
 
-      const pendingSales = db.ventas.filter(v => v.cliente_id === customerId && v.estado === 'PENDING');
-      const totalDebtUSD = pendingSales.reduce((acc, v) => acc + parseFloat(v.deuda_usd), 0);
-      if (totalDebtUSD <= 0) {
-        alert("Este cliente no posee deudas pendientes.");
-        return;
-      }
-
+      const customerSales = db.ventas.filter(v => v.cliente_id === c.id);
+      const totalDebtUSD = customerSales.reduce((acc, v) => acc + (v.estado === 'PENDING' ? parseFloat(v.deuda_usd) : 0), 0);
       const debtBs = (totalDebtUSD * currentRate).toFixed(2);
-      const cleanPhone = client.telefono.replace(/\D/g, '');
 
-      const message = `Hola ${client.nombre}, te saludamos de *Importrebel*. 👋\n\nTe escribimos para recordarte que posees un saldo pendiente acumulado en nuestra tienda.\n\n📌 *Resumen de Cuenta:*\n• Ventas Pendientes: *${pendingSales.length}*\n• *Total Deuda Pendiente:* *$${totalDebtUSD.toFixed(2)}* (aprox. *${debtBs} Bs* al cambio actual: ${currentRate.toFixed(2)} Bs/$).\n\nQuedamos atentos a tus comentarios para procesar tu pago. ¡Feliz día!`;
-
-      window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`, '_blank');
+      const text = `Hola ${client.nombre}, un saludo de Importrebel. Te recordamos que posees un saldo pendiente total de $${totalDebtUSD.toFixed(2)} (${debtBs} Bs a la tasa oficial de ${currentRate.toFixed(2)} Bs/$). ¡Quedamos atentos a tus comentarios!`;
+      window.open(`https://wa.me/${client.telefono.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(text)}`, '_blank');
     };
 
-    // REGISTRO Y GESTIÓN DE GASTOS
-    window.openExpenseModal = function() {
-      document.getElementById('form-expense').reset();
-      openModal('modal-expense');
-    };
-
-    window.handleExpenseSubmit = async function(e) {
-      e.preventDefault();
-      const concept = document.getElementById('exp-concept').value;
-      const category = document.getElementById('exp-category').value;
-      const amountUSD = parseFloat(document.getElementById('exp-amount').value);
-
-      const expId = 'EXP-' + Date.now();
-      const newExpense = {
-        id: expId,
-        concepto: concept,
-        categoria: category,
-        monto_usd: amountUSD,
-        fecha: new Date().toISOString()
-      };
-
-      db.gastos.unshift(newExpense);
-      await syncInsert('gastos', newExpense);
-
-      closeModal('modal-expense');
-      renderAll();
-    };
-
+    // GASTOS OPERATIVOS
     window.renderExpenses = function() {
       const tbody = document.getElementById('expenses-table-body');
       if (!tbody) return;
@@ -1881,20 +1842,42 @@
 
       tbody.innerHTML = db.gastos.map(g => `
         <tr class="hover:bg-slate-700/30 transition">
-          <td class="px-4 py-3 font-bold text-white">${g.concepto}</td>
-          <td class="px-4 py-3 text-xs text-slate-300">${g.categoria}</td>
-          <td class="px-4 py-3 text-xs text-slate-400">${new Date(g.fecha).toLocaleDateString()}</td>
+          <td class="px-4 py-3 font-semibold text-white">${g.concepto}</td>
+          <td class="px-4 py-3 text-xs text-slate-400"><span class="bg-slate-700 px-2 py-0.5 rounded">${g.categoria}</span></td>
+          <td class="px-4 py-3 text-xs text-slate-400 font-mono">${g.fecha}</td>
           <td class="px-4 py-3 font-bold text-indigo-400">$${parseFloat(g.monto_usd).toFixed(2)} <span class="text-xs text-slate-400 font-normal">(${(g.monto_usd * currentRate).toFixed(2)} Bs)</span></td>
           <td class="px-4 py-3 text-right">
-            <button onclick="deleteExpense('${g.id}')" class="p-1.5 bg-rose-500/20 text-rose-400 hover:bg-rose-500/30 rounded transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+            <button onclick="deleteExpense('${g.id}')" class="p-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 rounded transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
           </td>
         </tr>
       `).join('');
       lucide.createIcons();
     };
 
+    window.openExpenseModal = function() {
+      document.getElementById('form-expense').reset();
+      openModal('modal-expense');
+    };
+
+    window.handleExpenseSubmit = async function(e) {
+      e.preventDefault();
+      const newExp = {
+        id: 'EXP-' + Date.now(),
+        concepto: document.getElementById('exp-concept').value,
+        categoria: document.getElementById('exp-category').value,
+        monto_usd: parseFloat(document.getElementById('exp-amount').value),
+        fecha: new Date().toISOString().slice(0, 10)
+      };
+
+      db.gastos.unshift(newExp);
+      await syncInsert('gastos', newExp);
+
+      closeModal('modal-expense');
+      renderAll();
+    };
+
     window.deleteExpense = async function(id) {
-      if (confirm('¿Eliminar registro de gasto?')) {
+      if (confirm('¿Eliminar gasto?')) {
         db.gastos = db.gastos.filter(g => g.id !== id);
         await syncDelete('gastos', id);
         renderAll();
