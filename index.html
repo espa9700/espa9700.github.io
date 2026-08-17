@@ -565,7 +565,13 @@
             <span class="text-[10px] text-slate-400" id="tracking-iframe-label">Consultando guía...</span>
           </div>
           <div class="relative w-full h-80 bg-slate-950">
-            <iframe id="tracking-iframe" class="w-full h-full border-0" src="about:blank"></iframe>
+            <div class="p-8 text-center bg-slate-900 flex flex-col items-center justify-center space-y-4">
+    <p class="text-slate-300 text-sm">Haz clic en el siguiente botón para rastrear el paquete directamente en ParcelsApp:</p>
+    <a id="btn-parcels-link" href="#" target="_blank" class="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg transition flex items-center space-x-2">
+        <span>Abrir Rastreo en ParcelsApp</span>
+        <i data-lucide="external-link" class="w-4 h-4"></i>
+    </a>
+</div>
           </div>
         </div>
       </div>
@@ -2142,23 +2148,20 @@
       closeModal('modal-order');
       renderAll();
     };
+window.openTrackingModal = function(orderId) {
+    const order = db.encargos.find(o => o.id === orderId);
+    if (!order) return;
+    document.getElementById('inter-order-id').value = order.id;
+    document.getElementById('inter-tracking-code').value = order.tracking_inter || '';
+    document.getElementById('inter-freight-cost').value = '0.00';
 
-    window.openTrackingModal = function(orderId) {
-      const order = db.encargos.find(o => o.id === orderId);
-      if (!order) return;
-      document.getElementById('inter-order-id').value = order.id;
-      document.getElementById('inter-tracking-code').value = order.tracking_inter || '';
-      document.getElementById('inter-freight-cost').value = '0.00';
-      
-      // En lugar de apuntar a Google, apunta a ParcelsApp pasando el número de tracking
-const trackingCode = order.tracking_inter || order.tracking_origen || '';
-    const trackingUrl = `https://parcelsapp.com/es/tracking/${trackingCode}`;
-    
-    document.getElementById('tracking-iframe').src = trackingUrl;
-      document.getElementById('tracking-iframe-label').innerText = order.tracking_inter ? `Guía: ${order.tracking_inter}` : 'Sin guía intermedia';
+    const trackingCode = order.tracking_inter || order.tracking_origen || '';
+    document.getElementById('btn-parcels-link').href = `https://parcelsapp.com/es/tracking/${trackingCode}`;
 
-      openModal('modal-tracking');
-    };
+    document.getElementById('tracking-iframe-label').innerText = order.tracking_inter ? `Guía: ${order.tracking_inter}` : 'Sin guía intermedia';
+
+    openModal('modal-tracking');
+};
 
     window.handleInterScaleSubmit = async function(e) {
       e.preventDefault();
