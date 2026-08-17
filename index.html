@@ -10,7 +10,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Importrebel ERP">
-  <link rel="manifest" href="data:application/json;charset=utf-8,%7B%22name%22%3A%22Importrebel%20ERP%20%2F%20CRM%22%2C%22short_name%22%3A%22Importrebel%22%2C%22start_url%22%3A%22%2F%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230f172a%22%2C%22theme_color%22%3A%22%230f172a%22%2Dicons%22%3A%5B%5D%7D">
+  <link rel="manifest" href="data:application/json;charset=utf-8,%7B%22name%22%3A%22Importrebel%20ERP%20%2F%20CRM%22%2C%22short_name%22%3A%22Importrebel%22%2C%22start_url%22%3A%22%2F%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230f172a%22%2C%22theme_color%22%3A%22%230f172a%22%2C%22icons%22%3A%5B%5D%7D">
 
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -1493,40 +1493,36 @@
       const filtered = db.productos.filter(p => p.nombre.toLowerCase().includes(query) || p.sku.toLowerCase().includes(query));
 
       if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-slate-500">No hay productos registrados</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-slate-500">No hay productos registrados.</td></tr>`;
         return;
       }
 
       tbody.innerHTML = filtered.map(p => {
-        const images = p.imagenes_json || [];
-        const thumb = images.length > 0 ? images[0] : 'https://via.placeholder.com/100?text=Sin+Foto';
-        const marginUSD = (p.precio_venta - p.precio_costo).toFixed(2);
-        const marginPct = p.precio_costo > 0 ? (((p.precio_venta - p.precio_costo) / p.precio_costo) * 100).toFixed(0) : '0';
+        const cost = parseFloat(p.precio_costo);
+        const price = parseFloat(p.precio_venta);
+        const marginUSD = price - cost;
+        const marginPct = cost > 0 ? ((marginUSD / cost) * 100).toFixed(1) : 100;
+        const firstImg = (p.imagenes_json && p.imagenes_json.length > 0) ? p.imagenes_json[0] : null;
 
         return `
           <tr class="hover:bg-slate-700/30 transition">
-            <td class="px-4 py-3">
-              <div class="flex items-center gap-3">
-                <div class="relative w-12 h-12 bg-slate-900 rounded-lg overflow-hidden border border-slate-700 shrink-0">
-                  <img src="${thumb}" class="w-full h-full object-cover" />
-                </div>
-                <div>
-                  <div class="font-bold text-white">${p.nombre}</div>
-                  <div class="text-xs text-slate-400">ID: ${p.id}</div>
-                </div>
+            <td class="px-4 py-3 flex items-center gap-3">
+              ${firstImg ? `<img src="${firstImg}" class="w-10 h-10 object-cover rounded-lg border border-slate-700" />` : `<div class="w-10 h-10 bg-slate-700 rounded-lg flex items-center justify-center text-slate-500"><i data-lucide="image" class="w-5 h-5"></i></div>`}
+              <div>
+                <span class="font-bold text-white block">${p.nombre}</span>
               </div>
             </td>
-            <td class="px-4 py-3 text-slate-300 font-mono text-xs">${p.sku}</td>
-            <td class="px-4 py-3"><span class="text-slate-200 font-semibold">${p.stock} unids</span></td>
-            <td class="px-4 py-3 text-slate-300">$${parseFloat(p.precio_costo).toFixed(2)}</td>
+            <td class="px-4 py-3 font-mono text-slate-300 text-xs">${p.sku}</td>
+            <td class="px-4 py-3 font-bold ${p.stock <= 3 ? 'text-rose-400' : 'text-emerald-400'}">${p.stock}</td>
+            <td class="px-4 py-3 text-slate-300">$${cost.toFixed(2)}</td>
             <td class="px-4 py-3">
-              <div class="font-bold text-emerald-400">$${parseFloat(p.precio_venta).toFixed(2)}</div>
-              <div class="text-[11px] text-slate-400 font-mono">${(p.precio_venta * currentRate).toFixed(2)} Bs</div>
+              <span class="font-bold text-white block">$${price.toFixed(2)}</span>
+              <span class="text-[11px] text-slate-400 font-mono">${(price * currentRate).toFixed(2)} Bs</span>
             </td>
-            <td class="px-4 py-3"><span class="text-xs font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">+$${marginUSD} (${marginPct}%)</span></td>
-            <td class="px-4 py-3 text-right space-x-1">
-              <button onclick="editProduct('${p.id}')" class="p-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg transition" title="Editar"><i data-lucide="edit" class="w-4 h-4"></i></button>
-              <button onclick="deleteProduct('${p.id}')" class="p-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 rounded-lg transition" title="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+            <td class="px-4 py-3 text-emerald-400 font-semibold">+$${marginUSD.toFixed(2)} (${marginPct}%)</td>
+            <td class="px-4 py-3 text-right">
+              <button onclick="editProduct('${p.id}')" class="p-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-slate-200 transition mr-1"><i data-lucide="edit" class="w-4 h-4"></i></button>
+              <button onclick="deleteProduct('${p.id}')" class="p-1.5 bg-rose-500/20 hover:bg-rose-500/30 rounded-lg text-rose-400 transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
             </td>
           </tr>
         `;
@@ -1534,45 +1530,41 @@
       lucide.createIcons();
     };
 
-    window.openProductModal = function() {
+    window.openProductModal = function(prodId = null) {
       document.getElementById('form-product').reset();
       document.getElementById('prod-id').value = '';
-      document.getElementById('modal-product-title').innerText = 'Nuevo Producto';
-      tempUploadedImages = [];
       document.getElementById('prod-image-previews').innerHTML = '';
-      document.getElementById('prod-margin-usd').innerText = '$0.00';
-      document.getElementById('prod-margin-pct').innerText = '(0%)';
+      tempUploadedImages = [];
+      document.getElementById('modal-product-title').innerText = 'Nuevo Producto';
+      if (prodId) {
+        const p = db.productos.find(x => x.id === prodId);
+        if (p) {
+          document.getElementById('prod-id').value = p.id;
+          document.getElementById('prod-name').value = p.nombre;
+          document.getElementById('prod-sku').value = p.sku;
+          document.getElementById('prod-stock').value = p.stock;
+          document.getElementById('prod-cost').value = p.precio_costo;
+          document.getElementById('prod-price').value = p.precio_venta;
+          tempUploadedImages = p.imagenes_json || [];
+          renderImagePreviews();
+          document.getElementById('modal-product-title').innerText = 'Editar Producto';
+        }
+      }
       openModal('modal-product');
-    };
-
-    window.editProduct = function(id) {
-      const p = db.productos.find(x => x.id == id);
-      if (!p) return;
-      document.getElementById('prod-id').value = p.id;
-      document.getElementById('prod-name').value = p.nombre;
-      document.getElementById('prod-sku').value = p.sku;
-      document.getElementById('prod-stock').value = p.stock;
-      document.getElementById('prod-cost').value = p.precio_costo;
-      document.getElementById('prod-price').value = p.precio_venta;
-      document.getElementById('modal-product-title').innerText = 'Editar Producto';
-      tempUploadedImages = p.imagenes_json || [];
-      renderImagePreviews();
       calculateMargin();
-      openModal('modal-product');
     };
 
     window.calculateMargin = function() {
       const cost = parseFloat(document.getElementById('prod-cost').value) || 0;
       const price = parseFloat(document.getElementById('prod-price').value) || 0;
-      const margin = price - cost;
-      const pct = cost > 0 ? ((margin / cost) * 100).toFixed(0) : 0;
-      document.getElementById('prod-margin-usd').innerText = `$${margin.toFixed(2)}`;
+      const diff = price - cost;
+      const pct = cost > 0 ? ((diff / cost) * 100).toFixed(1) : 0;
+      document.getElementById('prod-margin-usd').innerText = `$${diff.toFixed(2)}`;
       document.getElementById('prod-margin-pct').innerText = `(${pct}%)`;
     };
 
     window.handleImageUpload = async function(e) {
       const files = e.target.files;
-      if (!files) return;
       for (let i = 0; i < files.length; i++) {
         const url = await uploadSupabaseStorageFile(files[i], 'productos');
         if (url) tempUploadedImages.push(url);
@@ -1583,9 +1575,9 @@
     function renderImagePreviews() {
       const container = document.getElementById('prod-image-previews');
       container.innerHTML = tempUploadedImages.map((img, idx) => `
-        <div class="relative w-16 h-16 rounded-lg overflow-hidden border border-slate-700 bg-slate-900">
-          <img src="${img}" class="w-full h-full object-cover" />
-          <button type="button" onclick="removeTempImage(${idx})" class="absolute top-0.5 right-0.5 bg-rose-600 text-white rounded-full p-0.5 text-[10px]"><i data-lucide="x" class="w-3 h-3"></i></button>
+        <div class="relative group">
+          <img src="${img}" class="w-16 h-16 object-cover rounded-lg border border-slate-700" />
+          <button type="button" onclick="removeTempImage(${idx})" class="absolute -top-1.5 -right-1.5 bg-rose-500 text-white rounded-full p-0.5 opacity-90 hover:opacity-100"><i data-lucide="x" class="w-3 h-3"></i></button>
         </div>
       `).join('');
       lucide.createIcons();
@@ -1602,100 +1594,75 @@
       const record = {
         nombre: document.getElementById('prod-name').value,
         sku: document.getElementById('prod-sku').value,
-        stock: parseInt(document.getElementById('prod-stock').value) || 0,
-        precio_costo: parseFloat(document.getElementById('prod-cost').value) || 0,
-        precio_venta: parseFloat(document.getElementById('prod-price').value) || 0,
+        stock: parseInt(document.getElementById('prod-stock').value),
+        precio_costo: parseFloat(document.getElementById('prod-cost').value),
+        precio_venta: parseFloat(document.getElementById('prod-price').value),
         imagenes_json: tempUploadedImages
       };
 
-      const btn = document.getElementById('btn-submit-product');
-      btn.disabled = true;
-      btn.innerText = 'Guardando...';
-
-      try {
-        if (id) {
-          record.id = id;
-          await syncUpdate('productos', id, record);
-          const idx = db.productos.findIndex(x => x.id == id);
-          if (idx !== -1) db.productos[idx] = record;
-        } else {
-          record.id = 'p_' + Date.now();
-          await syncInsert('productos', record);
-          db.productos.push(record);
-        }
-        closeModal('modal-product');
-        renderAll();
-      } catch (err) {
-        alert("Error al guardar producto: " + err.message);
-      } finally {
-        btn.disabled = false;
-        btn.innerText = 'Guardar Producto';
+      if (id) {
+        await syncUpdate('productos', id, record);
+        const idx = db.productos.findIndex(p => p.id === id);
+        if (idx !== -1) db.productos[idx] = { ...db.productos[idx], ...record };
+      } else {
+        const newRecord = { id: Date.now().toString(), ...record };
+        await syncInsert('productos', newRecord);
+        db.productos.push(newRecord);
       }
-    };
 
-    window.deleteProduct = async function(id) {
-      if (!confirm("¿Deseas eliminar este producto del inventario?")) return;
-      await syncDelete('productos', id);
-      db.productos = db.productos.filter(p => p.id != id);
+      closeModal('modal-product');
       renderAll();
     };
 
-    // --- CLIENTES ---
+    window.editProduct = function(id) { openProductModal(id); };
+
+    window.deleteProduct = async function(id) {
+      if (confirm("¿Estás seguro de eliminar este producto?")) {
+        await syncDelete('productos', id);
+        db.productos = db.productos.filter(p => p.id !== id);
+        renderAll();
+      }
+    };
+
     window.renderCustomers = function() {
       const query = (document.getElementById('customer-search')?.value || '').toLowerCase();
       const container = document.getElementById('customers-cards-container');
       if (!container) return;
 
-      const filtered = db.clientes.filter(c => 
-        c.nombre.toLowerCase().includes(query) || 
-        c.apellido.toLowerCase().includes(query) || 
-        c.telefono.toLowerCase().includes(query)
-      );
+      const filtered = db.clientes.filter(c => `${c.nombre} ${c.apellido} ${c.telefono}`.toLowerCase().includes(query));
 
       if (filtered.length === 0) {
-        container.innerHTML = `<div class="col-span-full text-center py-8 text-slate-500">No hay clientes registrados</div>`;
+        container.innerHTML = `<div class="col-span-full text-center py-8 text-slate-500">No hay clientes registrados.</div>`;
         return;
       }
 
       container.innerHTML = filtered.map(c => {
-        const clientSales = db.ventas.filter(v => v.cliente_id == c.id);
-        const totalSpent = clientSales.reduce((acc, v) => acc + parseFloat(v.total_usd), 0);
+        const clientSales = db.ventas.filter(v => v.cliente_id === c.id);
+        const totalBought = clientSales.reduce((acc, v) => acc + parseFloat(v.total_usd), 0);
         const totalDebt = clientSales.reduce((acc, v) => acc + (v.estado === 'PENDING' ? parseFloat(v.deuda_usd) : 0), 0);
 
         return `
-          <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 flex flex-col justify-between space-y-4 shadow">
-            <div class="flex justify-between items-start">
-              <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-emerald-500/10 text-emerald-400 rounded-full flex items-center justify-center font-bold text-base border border-emerald-500/20">
-                  ${c.nombre.charAt(0).toUpperCase()}
-                </div>
-                <div>
-                  <h3 class="font-bold text-white text-base">${c.nombre} ${c.apellido}</h3>
-                  <p class="text-xs text-slate-400 flex items-center gap-1 mt-0.5"><i data-lucide="phone" class="w-3 h-3"></i> ${c.telefono}</p>
+          <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 flex flex-col justify-between space-y-3 shadow-md">
+            <div>
+              <div class="flex justify-between items-start">
+                <h3 class="font-bold text-white text-base">${c.nombre} ${c.apellido}</h3>
+                <div class="flex gap-1">
+                  <button onclick="editCustomer('${c.id}')" class="p-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-slate-200 transition"><i data-lucide="edit" class="w-3.5 h-3.5"></i></button>
+                  <button onclick="deleteCustomer('${c.id}')" class="p-1.5 bg-rose-500/20 hover:bg-rose-500/30 rounded-lg text-rose-400 transition"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
                 </div>
               </div>
-              <div class="flex gap-1">
-                <button onclick="editCustomer('${c.id}')" class="p-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg transition" title="Editar"><i data-lucide="edit" class="w-4 h-4"></i></button>
-                <button onclick="deleteCustomer('${c.id}')" class="p-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 rounded-lg transition" title="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-              </div>
+              <p class="text-xs text-slate-400 flex items-center gap-1.5 mt-1"><i data-lucide="phone" class="w-3.5 h-3.5 text-emerald-400"></i> ${c.telefono}</p>
+              <p class="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5"><i data-lucide="map-pin" class="w-3.5 h-3.5 text-slate-500"></i> ${c.direccion || 'Sin dirección'}</p>
             </div>
-
-            <div class="text-xs text-slate-300 space-y-1 bg-slate-900/50 p-3 rounded-lg border border-slate-700/60">
-              <p class="flex items-center gap-1.5"><i data-lucide="map-pin" class="w-3.5 h-3.5 text-slate-400"></i> <span class="text-slate-300">${c.direccion || 'Sin dirección registrada'}</span></p>
-              <div class="flex justify-between pt-1 border-t border-slate-800">
-                <span class="text-slate-400">Total Compras:</span>
-                <span class="font-semibold text-emerald-400">$${totalSpent.toFixed(2)}</span>
+            <div class="border-t border-slate-700 pt-3 grid grid-cols-2 gap-2 text-xs">
+              <div class="bg-slate-900/50 p-2 rounded-lg border border-slate-700/60">
+                <span class="text-slate-400 block">Total Comprado</span>
+                <span class="font-bold text-emerald-400">$${totalBought.toFixed(2)}</span>
               </div>
-              <div class="flex justify-between">
-                <span class="text-slate-400">Deuda Pendiente:</span>
-                <span class="font-bold text-amber-400">$${totalDebt.toFixed(2)}</span>
+              <div class="bg-slate-900/50 p-2 rounded-lg border border-slate-700/60">
+                <span class="text-slate-400 block">Deuda Pendiente</span>
+                <span class="font-bold ${totalDebt > 0 ? 'text-amber-400' : 'text-slate-300'}">$${totalDebt.toFixed(2)}</span>
               </div>
-            </div>
-
-            <div class="flex gap-2 pt-1">
-              <a href="https://wa.me/${c.telefono.replace(/\D/g,'')}" target="_blank" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 shadow">
-                <i data-lucide="message-circle" class="w-3.5 h-3.5"></i> WhatsApp
-              </a>
             </div>
           </div>
         `;
@@ -1703,22 +1670,21 @@
       lucide.createIcons();
     };
 
-    window.openCustomerModal = function() {
+    window.openCustomerModal = function(custId = null) {
       document.getElementById('form-customer').reset();
       document.getElementById('cust-id').value = '';
       document.getElementById('modal-customer-title').innerText = 'Nuevo Cliente';
-      openModal('modal-customer');
-    };
-
-    window.editCustomer = function(id) {
-      const c = db.clientes.find(x => x.id == id);
-      if (!c) return;
-      document.getElementById('cust-id').value = c.id;
-      document.getElementById('cust-name').value = c.nombre;
-      document.getElementById('cust-lastname').value = c.apellido;
-      document.getElementById('cust-phone').value = c.telefono;
-      document.getElementById('cust-address').value = c.direccion || '';
-      document.getElementById('modal-customer-title').innerText = 'Editar Cliente';
+      if (custId) {
+        const c = db.clientes.find(x => x.id === custId);
+        if (c) {
+          document.getElementById('cust-id').value = c.id;
+          document.getElementById('cust-name').value = c.nombre;
+          document.getElementById('cust-lastname').value = c.apellido;
+          document.getElementById('cust-phone').value = c.telefono;
+          document.getElementById('cust-address').value = c.direccion || '';
+          document.getElementById('modal-customer-title').innerText = 'Editar Cliente';
+        }
+      }
       openModal('modal-customer');
     };
 
@@ -1726,225 +1692,36 @@
       e.preventDefault();
       const id = document.getElementById('cust-id').value;
       const record = {
-        nombre: document.getElementById('cust-name').value.trim(),
-        apellido: document.getElementById('cust-lastname').value.trim(),
-        telefono: document.getElementById('cust-phone').value.trim(),
-        direccion: document.getElementById('cust-address').value.trim()
+        nombre: document.getElementById('cust-name').value,
+        apellido: document.getElementById('cust-lastname').value,
+        telefono: document.getElementById('cust-phone').value,
+        direccion: document.getElementById('cust-address').value
       };
 
-      const btn = document.getElementById('btn-submit-customer');
-      btn.disabled = true;
-      btn.innerText = 'Guardando...';
-
-      try {
-        if (id) {
-          record.id = id;
-          await syncUpdate('clientes', id, record);
-          const idx = db.clientes.findIndex(x => x.id == id);
-          if (idx !== -1) db.clientes[idx] = record;
-        } else {
-          record.id = 'c_' + Date.now();
-          await syncInsert('clientes', record);
-          db.clientes.push(record);
-        }
-        closeModal('modal-customer');
-        renderAll();
-      } catch (err) {
-        alert("Error al guardar cliente: " + err.message);
-      } finally {
-        btn.disabled = false;
-        btn.innerText = 'Guardar Cliente';
+      if (id) {
+        await syncUpdate('clientes', id, record);
+        const idx = db.clientes.findIndex(c => c.id === id);
+        if (idx !== -1) db.clientes[idx] = { ...db.clientes[idx], ...record };
+      } else {
+        const newRecord = { id: Date.now().toString(), ...record };
+        await syncInsert('clientes', newRecord);
+        db.clientes.push(newRecord);
       }
+
+      closeModal('modal-customer');
+      renderAll();
     };
+
+    window.editCustomer = function(id) { openCustomerModal(id); };
 
     window.deleteCustomer = async function(id) {
-      if (!confirm("¿Deseas eliminar este cliente?")) return;
-      try {
+      if (confirm("¿Estás seguro de eliminar este cliente?")) {
         await syncDelete('clientes', id);
-        db.clientes = db.clientes.filter(c => c.id != id);
+        db.clientes = db.clientes.filter(c => c.id !== id);
         renderAll();
-      } catch (err) {
-        alert("Error al eliminar cliente: " + err.message);
       }
     };
 
-    // --- ENCARGOS / TRIANGULACIÓN ---
-    window.renderOrders = function() {
-      const tbody = document.getElementById('orders-table-body');
-      if (!tbody) return;
-
-      if (!db.encargos || db.encargos.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-slate-500">No hay encargos o importaciones registradas</td></tr>`;
-        return;
-      }
-
-      tbody.innerHTML = db.encargos.map(o => {
-        const client = db.clientes.find(c => c.id == o.cliente_id) || { nombre: 'Cliente', apellido: 'Desconocido' };
-        let statusBadge = '';
-        if (o.estado === 'COMPLETADO') statusBadge = '<span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[11px] font-bold">Completado</span>';
-        else if (o.estado === 'LOST') statusBadge = '<span class="bg-rose-500/10 text-rose-400 border border-rose-500/20 px-2 py-0.5 rounded text-[11px] font-bold">Extraviado</span>';
-        else statusBadge = '<span class="bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded text-[11px] font-bold">En Tránsito</span>';
-
-        return `
-          <tr class="hover:bg-slate-700/30 transition">
-            <td class="px-4 py-3">
-              <div class="font-bold text-white">${o.producto_nombre}</div>
-              <div class="text-xs text-slate-400">${o.variante || 'Sin variante'} (x${o.cantidad})</div>
-            </td>
-            <td class="px-4 py-3 text-slate-300">${client.nombre} ${client.apellido}</td>
-            <td class="px-4 py-3">
-              <div class="font-semibold text-slate-200">${o.proveedor}</div>
-              <div class="text-xs text-emerald-400">$${parseFloat(o.costo_fabrica).toFixed(2)}</div>
-            </td>
-            <td class="px-4 py-3 text-xs text-slate-300 font-mono">${o.ruta || 'RUTA_A'}</td>
-            <td class="px-4 py-3 text-xs text-slate-300 font-mono">${o.tracking_origen || 'N/A'}</td>
-            <td class="px-4 py-3">${statusBadge}</td>
-            <td class="px-4 py-3 text-right space-x-1">
-              <button onclick="openTrackingModal('${o.id}')" class="p-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg transition" title="Tracking en Vivo"><i data-lucide="truck" class="w-4 h-4"></i></button>
-              <button onclick="openLostModal('${o.id}')" class="p-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 rounded-lg transition" title="Reportar Extraviado"><i data-lucide="alert-octagon" class="w-4 h-4"></i></button>
-              <button onclick="deleteOrder('${o.id}')" class="p-1.5 bg-slate-700 hover:bg-slate-600 text-slate-400 hover:text-white rounded-lg transition" title="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-            </td>
-          </tr>
-        `;
-      }).join('');
-      lucide.createIcons();
-    };
-
-    window.openOrderModal = function() {
-      document.getElementById('form-order').reset();
-      document.getElementById('order-id').value = '';
-      document.getElementById('modal-order-title').innerText = 'Nuevo Encargo de Importación';
-      document.getElementById('order-purchase-date').value = new Date().toISOString().slice(0, 10);
-      populateDropdowns();
-      openModal('modal-order');
-    };
-
-    window.handleOrderSubmit = async function(e) {
-      e.preventDefault();
-      const fileInput = document.getElementById('order-invoice-file');
-      let invoiceUrl = '';
-      if (fileInput.files.length > 0) {
-        invoiceUrl = await uploadSupabaseStorageFile(fileInput.files[0], 'documentos');
-      }
-
-      const record = {
-        id: 'ord_' + Date.now(),
-        cliente_id: document.getElementById('order-client-select').value,
-        producto_nombre: document.getElementById('order-prod-name').value.trim(),
-        variante: document.getElementById('order-prod-variant').value.trim(),
-        cantidad: parseInt(document.getElementById('order-prod-qty').value) || 1,
-        proveedor: document.getElementById('order-supplier-name').value.trim(),
-        costo_fabrica: parseFloat(document.getElementById('order-factory-cost').value) || 0,
-        fecha_compra: document.getElementById('order-purchase-date').value,
-        factura_url: invoiceUrl,
-        ruta: document.getElementById('order-route').value,
-        tracking_origen: document.getElementById('order-tracking-orig').value.trim(),
-        estado: 'TRANSIT'
-      };
-
-      const btn = document.getElementById('btn-submit-order');
-      btn.disabled = true;
-      btn.innerText = 'Guardando...';
-
-      try {
-        await syncInsert('encargos', record);
-        db.encargos.push(record);
-        closeModal('modal-order');
-        renderAll();
-      } catch (err) {
-        alert("Error al guardar encargo: " + err.message);
-      } finally {
-        btn.disabled = false;
-        btn.innerText = 'Guardar Encargo';
-      }
-    };
-
-    window.deleteOrder = async function(id) {
-      if (!confirm("¿Deseas eliminar este encargo?")) return;
-      await syncDelete('encargos', id);
-      db.encargos = db.encargos.filter(o => o.id != id);
-      renderAll();
-    };
-
-    window.openTrackingModal = function(id) {
-      const o = db.encargos.find(x => x.id == id);
-      if (!o) return;
-      document.getElementById('inter-order-id').value = o.id;
-      document.getElementById('inter-tracking-code').value = o.tracking_intermedio || o.tracking_origen || '';
-      document.getElementById('inter-freight-cost').value = '0.00';
-      document.getElementById('tracking-modal-title').innerText = `Rastreo: ${o.producto_nombre}`;
-      document.getElementById('tracking-iframe-label').innerText = `Guía: ${o.tracking_origen || 'N/A'}`;
-      
-      const iframe = document.getElementById('tracking-iframe');
-      if (o.tracking_origen) {
-        iframe.src = `https://www.google.com/search?q=tracking+${encodeURIComponent(o.tracking_origen)}`;
-      } else {
-        iframe.src = 'about:blank';
-      }
-      openModal('modal-tracking');
-    };
-
-    window.handleInterScaleSubmit = async function(e) {
-      e.preventDefault();
-      const id = document.getElementById('inter-order-id').value;
-      const trackingCode = document.getElementById('inter-tracking-code').value.trim();
-      const freightCost = parseFloat(document.getElementById('inter-freight-cost').value) || 0;
-
-      const o = db.encargos.find(x => x.id == id);
-      if (!o) return;
-
-      o.tracking_intermedio = trackingCode;
-      await syncUpdate('encargos', id, o);
-
-      if (freightCost > 0) {
-        const expenseRecord = {
-          id: 'exp_' + Date.now(),
-          concepto: `Flete/Aduana adicional - ${o.producto_nombre}`,
-          categoria: 'Flete/Logística',
-          fecha: new Date().toISOString().slice(0, 10),
-          monto_usd: freightCost
-        };
-        await syncInsert('gastos', expenseRecord);
-        db.gastos.push(expenseRecord);
-      }
-
-      closeModal('modal-tracking');
-      renderAll();
-      alert("Escala y tracking actualizados exitosamente.");
-    };
-
-    window.openLostModal = function(id) {
-      document.getElementById('lost-order-id').value = id;
-      document.getElementById('lost-reason').value = '';
-      openModal('modal-lost');
-    };
-
-    window.handleLostSubmit = async function(e) {
-      e.preventDefault();
-      const id = document.getElementById('lost-order-id').value;
-      const reason = document.getElementById('lost-reason').value.trim();
-      const o = db.encargos.find(x => x.id == id);
-      if (!o) return;
-
-      o.estado = 'LOST';
-      await syncUpdate('encargos', id, o);
-
-      const lossExpense = {
-        id: 'exp_' + Date.now(),
-        concepto: `Pérdida/Extravío: ${o.producto_nombre} (${reason})`,
-        categoria: 'Pérdida/Extravío',
-        fecha: new Date().toISOString().slice(0, 10),
-        monto_usd: parseFloat(o.costo_fabrica) * (o.cantidad || 1)
-      };
-      await syncInsert('gastos', lossExpense);
-      db.gastos.push(lossExpense);
-
-      closeModal('modal-lost');
-      renderAll();
-      alert("Encargo marcado como extraviado y registrado en gastos.");
-    };
-
-    // --- VENTAS / POS ---
     window.renderSales = function() {
       const tbody = document.getElementById('sales-table-body');
       if (!tbody) return;
@@ -1952,35 +1729,44 @@
       const filtered = db.ventas.filter(v => activeSalesFilter === 'ALL' || v.estado === activeSalesFilter);
 
       if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-slate-500">No hay ventas registradas</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-slate-500">No hay ventas registradas.</td></tr>`;
         return;
       }
 
       tbody.innerHTML = filtered.map(v => {
-        const client = db.clientes.find(c => c.id == v.cliente_id) || { nombre: 'Cliente', apellido: 'General' };
-        const itemsCount = (v.items_json || []).reduce((acc, i) => acc + i.cantidad, 0);
-        let badge = v.estado === 'COMPLETADO' 
-          ? '<span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[11px] font-bold">Completada</span>'
-          : '<span class="bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded text-[11px] font-bold">Pendiente (Deuda)</span>';
+        const client = db.clientes.find(c => c.id === v.cliente_id) || { nombre: 'Cliente', apellido: 'General' };
+        const totalUSD = parseFloat(v.total_usd);
+        const paidUSD = parseFloat(v.abonado_usd);
+        const debtUSD = parseFloat(v.deuda_usd);
+        const isCompleted = v.estado === 'COMPLETED';
 
         return `
           <tr class="hover:bg-slate-700/30 transition">
-            <td class="px-4 py-3 font-mono text-xs text-slate-300">#INV-${v.id}<br><span class="text-[10px] text-slate-500">${v.fecha || ''}</span></td>
-            <td class="px-4 py-3 font-medium text-white">${client.nombre} ${client.apellido}</td>
-            <td class="px-4 py-3 text-slate-300">${itemsCount} unids</td>
+            <td class="px-4 py-3 font-mono text-xs text-slate-300">
+              <span class="font-bold text-white block">#INV-${v.id}</span>
+              ${new Date(parseInt(v.id)).toLocaleDateString()}
+            </td>
+            <td class="px-4 py-3 font-semibold text-white">${client.nombre} ${client.apellido}</td>
+            <td class="px-4 py-3 text-xs text-slate-300">${(v.items_json || []).reduce((acc, i) => acc + i.cantidad, 0)} items</td>
             <td class="px-4 py-3">
-              <div class="font-bold text-emerald-400">$${parseFloat(v.total_usd).toFixed(2)}</div>
-              <div class="text-[11px] text-slate-400 font-mono">${(v.total_usd * currentRate).toFixed(2)} Bs</div>
+              <span class="font-bold text-white block">$${totalUSD.toFixed(2)}</span>
+              <span class="text-[11px] text-slate-400 font-mono">${(totalUSD * currentRate).toFixed(2)} Bs</span>
             </td>
             <td class="px-4 py-3">
-              <div class="text-slate-200 text-xs">Abonado: <span class="font-bold text-emerald-400">$${parseFloat(v.abonado_usd).toFixed(2)}</span></div>
-              <div class="text-slate-400 text-[11px]">Deuda: <span class="font-bold text-amber-400">$${parseFloat(v.deuda_usd).toFixed(2)}</span></div>
+              <span class="text-emerald-400 block text-xs">Abonado: $${paidUSD.toFixed(2)}</span>
+              ${debtUSD > 0 ? `<span class="text-amber-400 block text-xs font-semibold">Deuda: $${debtUSD.toFixed(2)}</span>` : `<span class="text-slate-500 text-xs">Sin deuda</span>`}
             </td>
-            <td class="px-4 py-3">${badge}</td>
-            <td class="px-4 py-3 text-right space-x-1">
-              <button onclick="openInvoiceModal('${v.id}')" class="p-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg transition" title="Ver Factura"><i data-lucide="file-text" class="w-4 h-4"></i></button>
-              ${v.estado === 'PENDING' ? `<button onclick="openPaymentModal('${v.id}')" class="p-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 rounded-lg transition" title="Registrar Abono"><i data-lucide="dollar-sign" class="w-4 h-4"></i></button>` : ''}
-              <button onclick="deleteSale('${v.id}')" class="p-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 rounded-lg transition" title="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+            <td class="px-4 py-3">
+              <span class="px-2 py-1 rounded-full text-[10px] font-bold ${isCompleted ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'}">
+                ${isCompleted ? 'COMPLETADA' : 'PENDIENTE'}
+              </span>
+            </td>
+            <td class="px-4 py-3 text-right">
+              <div class="flex items-center justify-end gap-1">
+                <button onclick="openInvoiceModal('${v.id}')" title="Ver Factura" class="p-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-slate-200 transition"><i data-lucide="file-text" class="w-4 h-4"></i></button>
+                ${!isCompleted ? `<button onclick="openPaymentModal('${v.id}')" title="Registrar Abono" class="p-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 rounded-lg text-emerald-400 transition"><i data-lucide="dollar-sign" class="w-4 h-4"></i></button>` : ''}
+                <button onclick="deleteSale('${v.id}')" title="Eliminar Venta" class="p-1.5 bg-rose-500/20 hover:bg-rose-500/30 rounded-lg text-rose-400 transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+              </div>
             </td>
           </tr>
         `;
@@ -2003,39 +1789,36 @@
     };
 
     window.openNewSaleModal = function() {
-      saleCart = [];
       document.getElementById('form-sale').reset();
-      populateDropdowns();
+      saleCart = [];
       renderSaleCart();
+      populateDropdowns();
       openModal('modal-sale');
     };
 
     window.addProductToSaleCart = function() {
-      const prodId = document.getElementById('sale-product-select').value;
+      const select = document.getElementById('sale-product-select');
+      const prodId = select.value;
       const qty = parseInt(document.getElementById('sale-product-qty').value) || 1;
-      const prod = db.productos.find(p => p.id == prodId);
-      if (!prod) return;
+      const product = db.productos.find(p => p.id === prodId);
+      if (!product) return;
 
-      if (prod.stock < qty) {
+      if (product.stock < qty) {
         alert("Stock insuficiente para este producto.");
         return;
       }
 
-      const existing = saleCart.find(i => i.producto_id == prodId);
+      const existing = saleCart.find(i => i.producto_id === prodId);
       if (existing) {
         existing.cantidad += qty;
       } else {
         saleCart.push({
-          producto_id: prod.id,
-          cantidad: qty,
-          precio_unitario: prod.precio_venta
+          producto_id: product.id,
+          nombre: product.nombre,
+          precio_unitario: product.precio_venta,
+          cantidad: qty
         });
       }
-      renderSaleCart();
-    };
-
-    window.removeSaleCartItem = function(index) {
-      saleCart.splice(index, 1);
       renderSaleCart();
     };
 
@@ -2044,30 +1827,33 @@
       if (!tbody) return;
 
       if (saleCart.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-slate-500">El carrito está vacío</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-slate-500">No hay productos agregados al carrito.</td></tr>`;
         updateSaleCalculations();
         return;
       }
 
-      tbody.innerHTML = saleCart.map((item, idx) => {
-        const prod = db.productos.find(p => p.id == item.producto_id) || { nombre: 'Producto' };
-        const subtotal = item.cantidad * item.precio_unitario;
-        return `
-          <tr>
-            <td class="py-2">${prod.nombre}</td>
-            <td class="py-2 text-center">${item.cantidad}</td>
-            <td class="py-2 text-right">$${item.precio_unitario.toFixed(2)}</td>
-            <td class="py-2 text-right font-bold text-emerald-400">$${subtotal.toFixed(2)}</td>
-            <td class="py-2 text-right"><button type="button" onclick="removeSaleCartItem(${idx})" class="text-rose-400 hover:text-rose-300"><i data-lucide="x" class="w-4 h-4"></i></button></td>
-          </tr>
-        `;
-      }).join('');
+      tbody.innerHTML = saleCart.map((item, idx) => `
+        <tr>
+          <td class="py-2">${item.nombre}</td>
+          <td class="py-2 text-center">${item.cantidad}</td>
+          <td class="py-2 text-right">$${parseFloat(item.precio_unitario).toFixed(2)}</td>
+          <td class="py-2 text-right font-bold">$${(item.precio_unitario * item.cantidad).toFixed(2)}</td>
+          <td class="py-2 text-right">
+            <button type="button" onclick="removeCartItem(${idx})" class="p-1 text-rose-400 hover:text-rose-300"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+          </td>
+        </tr>
+      `).join('');
       updateSaleCalculations();
       lucide.createIcons();
     }
 
+    window.removeCartItem = function(idx) {
+      saleCart.splice(idx, 1);
+      renderSaleCart();
+    };
+
     function updateSaleCalculations() {
-      const totalUSD = saleCart.reduce((acc, item) => acc + (item.cantidad * item.precio_unitario), 0);
+      const totalUSD = saleCart.reduce((acc, i) => acc + (i.precio_unitario * i.cantidad), 0);
       const paidUSD = parseFloat(document.getElementById('sale-paid-amount')?.value) || 0;
       const debtUSD = Math.max(0, totalUSD - paidUSD);
 
@@ -2078,116 +1864,96 @@
 
     window.handleSaleSubmit = async function(e) {
       e.preventDefault();
-      if (saleCart.length === 0) { alert("Agrega al menos un producto al carrito."); return; }
-      
-      const client_id = document.getElementById('sale-client-select').value;
-      const totalUSD = saleCart.reduce((acc, item) => acc + (item.cantidad * item.precio_unitario), 0);
+      if (saleCart.length === 0) { alert("Agrega al menos un producto a la venta."); return; }
+
+      const clientId = document.getElementById('sale-client-select').value;
+      const totalUSD = saleCart.reduce((acc, i) => acc + (i.precio_unitario * i.cantidad), 0);
       const paidUSD = parseFloat(document.getElementById('sale-paid-amount').value) || 0;
       const debtUSD = Math.max(0, totalUSD - paidUSD);
-      const status = paidUSD >= totalUSD ? 'COMPLETADO' : 'PENDING';
+      const status = paidUSD >= totalUSD ? 'COMPLETED' : 'PENDING';
 
-      // Validar stock antes de descontar
-      for (let item of saleCart) {
-        const prod = db.productos.find(p => p.id == item.producto_id);
-        if (!prod || prod.stock < item.cantidad) {
-          alert(`Stock insuficiente para ${prod ? prod.nombre : 'producto'}`);
-          return;
-        }
-      }
-
+      const saleId = Date.now().toString();
       const saleRecord = {
-        id: Math.floor(100000 + Math.random() * 900000).toString(),
-        cliente_id: client_id,
+        id: saleId,
+        cliente_id: clientId,
         items_json: saleCart,
         total_usd: totalUSD,
-        abonado_usd: Math.min(paidUSD, totalUSD),
+        abonado_usd: paidUSD,
         deuda_usd: debtUSD,
-        estado: status,
-        fecha: new Date().toISOString().slice(0, 10)
+        estado: status
       };
 
-      const btn = document.getElementById('btn-submit-sale');
-      btn.disabled = true;
-      btn.innerText = 'Procesando...';
-
-      try {
-        // Descontar inventario
-        for (let item of saleCart) {
-          const prod = db.productos.find(p => p.id == item.producto_id);
-          if (prod) {
-            prod.stock -= item.cantidad;
-            await syncUpdate('productos', prod.id, prod);
-          }
+      // Descontar stock
+      for (const item of saleCart) {
+        const prod = db.productos.find(p => p.id === item.producto_id);
+        if (prod) {
+          prod.stock = Math.max(0, prod.stock - item.cantidad);
+          await syncUpdate('productos', prod.id, { stock: prod.stock });
         }
-
-        await syncInsert('ventas', saleRecord);
-        db.ventas.push(saleRecord);
-
-        closeModal('modal-sale');
-        renderAll();
-        openInvoiceModal(saleRecord.id);
-      } catch (err) {
-        alert("Error al procesar la venta: " + err.message);
-      } finally {
-        btn.disabled = false;
-        btn.innerText = 'Procesar Venta';
       }
+
+      await syncInsert('ventas', saleRecord);
+      db.ventas.push(saleRecord);
+
+      closeModal('modal-sale');
+      renderAll();
+      openInvoiceModal(saleId);
     };
 
     window.deleteSale = async function(id) {
-      if (!confirm("¿Deseas eliminar esta venta? Se restituirá el stock.")) return;
-      const sale = db.ventas.find(v => v.id == id);
-      if (sale) {
-        for (let item of (sale.items_json || [])) {
-          const prod = db.productos.find(p => p.id == item.producto_id);
-          if (prod) {
-            prod.stock += item.cantidad;
-            await syncUpdate('productos', prod.id, prod);
+      if (confirm("¿Estás seguro de eliminar esta venta? Se restituirá el stock.")) {
+        const sale = db.ventas.find(v => v.id === id);
+        if (sale) {
+          for (const item of (sale.items_json || [])) {
+            const prod = db.productos.find(p => p.id === item.producto_id);
+            if (prod) {
+              prod.stock += item.cantidad;
+              await syncUpdate('productos', prod.id, { stock: prod.stock });
+            }
           }
         }
+        await syncDelete('ventas', id);
+        db.ventas = db.ventas.filter(v => v.id !== id);
+        renderAll();
       }
-      await syncDelete('ventas', id);
-      db.ventas = db.ventas.filter(v => v.id != id);
-      renderAll();
     };
 
-    window.openInvoiceModal = function(id) {
-      const sale = db.ventas.find(v => v.id == id);
+    window.openInvoiceModal = function(saleId) {
+      currentInvoiceSaleId = saleId;
+      const sale = db.ventas.find(v => v.id === saleId);
       if (!sale) return;
-      currentInvoiceSaleId = sale.id;
 
-      const client = db.clientes.find(c => c.id == sale.cliente_id) || { nombre: 'Cliente', apellido: 'General', telefono: 'N/A', direccion: 'N/A' };
-      
+      const client = db.clientes.find(c => c.id === sale.cliente_id) || { nombre: 'Cliente General', apellido: '', telefono: 'N/A', direccion: 'N/A' };
+
       document.getElementById('inv-number').innerText = `#INV-${sale.id}`;
-      document.getElementById('inv-date').innerText = `Fecha: ${sale.fecha || new Date().toISOString().slice(0,10)}`;
+      document.getElementById('inv-date').innerText = `Fecha: ${new Date(parseInt(sale.id)).toLocaleDateString()}`;
       document.getElementById('inv-client-name').innerText = `${client.nombre} ${client.apellido}`;
       document.getElementById('inv-client-phone').innerText = `Teléfono: ${client.telefono}`;
-      document.getElementById('inv-client-address').innerText = client.direccion || 'Sin dirección';
+      document.getElementById('inv-client-address').innerText = client.direccion || 'Dirección no especificada';
+
+      const itemsBody = document.getElementById('inv-items-body');
+      itemsBody.innerHTML = (sale.items_json || []).map(item => `
+        <tr class="border-b border-slate-100">
+          <td class="py-2.5 px-1">${item.nombre}</td>
+          <td class="py-2.5 px-1 text-center">${item.cantidad}</td>
+          <td class="py-2.5 px-1 text-right">$${parseFloat(item.precio_unitario).toFixed(2)}</td>
+          <td class="py-2.5 px-1 text-right font-bold">$${(item.precio_unitario * item.cantidad).toFixed(2)}</td>
+        </tr>
+      `).join('');
+
       document.getElementById('inv-rate-display').innerText = `${currentRate.toFixed(2)} Bs/$`;
-      document.getElementById('inv-status-badge').innerText = sale.estado;
+      const badge = document.getElementById('inv-status-badge');
+      badge.innerText = sale.estado === 'COMPLETED' ? 'COMPLETADO' : 'PENDIENTE DE PAGO';
+      badge.className = `font-bold uppercase ${sale.estado === 'COMPLETED' ? 'text-emerald-600' : 'text-amber-600'}`;
+
       document.getElementById('inv-total-usd').innerText = `$${parseFloat(sale.total_usd).toFixed(2)}`;
       document.getElementById('inv-total-bs').innerText = `${(sale.total_usd * currentRate).toFixed(2)} Bs`;
-
-      const tbody = document.getElementById('inv-items-body');
-      tbody.innerHTML = (sale.items_json || []).map(item => {
-        const prod = db.productos.find(p => p.id == item.producto_id) || { nombre: 'Producto General' };
-        const price = parseFloat(item.precio_unitario || 0);
-        const subtotal = price * item.cantidad;
-        return `
-          <tr class="border-b border-slate-100">
-            <td class="py-2 px-1 font-bold text-slate-800">${prod.nombre}</td>
-            <td class="py-2 px-1 text-center">${item.cantidad}</td>
-            <td class="py-2 px-1 text-right">$${price.toFixed(2)}</td>
-            <td class="py-2 px-1 text-right font-bold">$${subtotal.toFixed(2)}</td>
-          </tr>
-        `;
-      }).join('');
 
       openModal('modal-invoice');
     };
 
-    window.openPaymentModal = function(id) {
-      const sale = db.ventas.find(v => v.id == id);
+    window.openPaymentModal = function(saleId) {
+      const sale = db.ventas.find(v => v.id === saleId);
       if (!sale) return;
       document.getElementById('pay-sale-id').value = sale.id;
       document.getElementById('pay-sale-info').innerText = `Venta #INV-${sale.id} - Total: $${parseFloat(sale.total_usd).toFixed(2)}`;
@@ -2201,56 +1967,43 @@
       e.preventDefault();
       const saleId = document.getElementById('pay-sale-id').value;
       const amount = parseFloat(document.getElementById('pay-amount').value) || 0;
-      const sale = db.ventas.find(v => v.id == saleId);
+      const sale = db.ventas.find(v => v.id === saleId);
       if (!sale) return;
 
-      if (amount <= 0 || amount > sale.deuda_usd) {
-        alert("Monto de abono inválido o superior a la deuda restante.");
-        return;
-      }
-
       sale.abonado_usd = parseFloat(sale.abonado_usd) + amount;
-      sale.deuda_usd = Math.max(0, parseFloat(sale.deuda_usd) - amount);
-      if (sale.deuda_usd === 0) sale.estado = 'COMPLETADO';
+      sale.deuda_usd = Math.max(0, parseFloat(sale.total_usd) - sale.abonado_usd);
+      if (sale.deuda_usd === 0) sale.estado = 'COMPLETED';
 
-      const btn = document.getElementById('btn-submit-payment');
-      btn.disabled = true;
-      btn.innerText = 'Guardando...';
+      await syncUpdate('ventas', sale.id, {
+        abonado_usd: sale.abonado_usd,
+        deuda_usd: sale.deuda_usd,
+        estado: sale.estado
+      });
 
-      try {
-        await syncUpdate('ventas', sale.id, sale);
-        closeModal('modal-payment');
-        renderAll();
-        alert("Abono registrado exitosamente.");
-      } catch (err) {
-        alert("Error al registrar abono: " + err.message);
-      } finally {
-        btn.disabled = false;
-        btn.innerText = 'Guardar Abono';
-      }
+      closeModal('modal-payment');
+      renderAll();
     };
 
-    // --- GASTOS ---
     window.renderExpenses = function() {
       const tbody = document.getElementById('expenses-table-body');
       if (!tbody) return;
 
       if (db.gastos.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-slate-500">No hay gastos registrados</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-slate-500">No hay gastos registrados.</td></tr>`;
         return;
       }
 
       tbody.innerHTML = db.gastos.map(g => `
         <tr class="hover:bg-slate-700/30 transition">
-          <td class="px-4 py-3 font-bold text-white">${g.concepto}</td>
-          <td class="px-4 py-3"><span class="bg-slate-700 text-slate-300 px-2 py-0.5 rounded text-xs font-semibold">${g.categoria}</span></td>
-          <td class="px-4 py-3 text-slate-300 text-xs">${g.fecha || ''}</td>
+          <td class="px-4 py-3 font-semibold text-white">${g.concepto}</td>
+          <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">${g.categoria}</span></td>
+          <td class="px-4 py-3 text-xs text-slate-300">${g.fecha || new Date(parseInt(g.id || Date.now())).toLocaleDateString()}</td>
           <td class="px-4 py-3">
-            <div class="font-bold text-rose-400">$${parseFloat(g.monto_usd).toFixed(2)}</div>
-            <div class="text-[11px] text-slate-400 font-mono">${(g.monto_usd * currentRate).toFixed(2)} Bs</div>
+            <span class="font-bold text-rose-400 block">$${parseFloat(g.monto_usd).toFixed(2)}</span>
+            <span class="text-[11px] text-slate-400 font-mono">${(parseFloat(g.monto_usd) * currentRate).toFixed(2)} Bs</span>
           </td>
           <td class="px-4 py-3 text-right">
-            <button onclick="deleteExpense('${g.id}')" class="p-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 rounded-lg transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+            <button onclick="deleteExpense('${g.id}')" class="p-1.5 bg-rose-500/20 hover:bg-rose-500/30 rounded-lg text-rose-400 transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
           </td>
         </tr>
       `).join('');
@@ -2265,48 +2018,213 @@
     window.handleExpenseSubmit = async function(e) {
       e.preventDefault();
       const record = {
-        id: 'exp_' + Date.now(),
-        concepto: document.getElementById('exp-concept').value.trim(),
+        id: Date.now().toString(),
+        concepto: document.getElementById('exp-concept').value,
         categoria: document.getElementById('exp-category').value,
-        monto_usd: parseFloat(document.getElementById('exp-amount').value) || 0,
-        fecha: new Date().toISOString().slice(0, 10)
+        monto_usd: parseFloat(document.getElementById('exp-amount').value),
+        fecha: new Date().toISOString().slice(0,10)
       };
 
-      const btn = document.getElementById('btn-submit-expense');
-      btn.disabled = true;
-      btn.innerText = 'Registrando...';
-
-      try {
-        await syncInsert('gastos', record);
-        db.gastos.push(record);
-        closeModal('modal-expense');
-        renderAll();
-      } catch (err) {
-        alert("Error al registrar gasto: " + err.message);
-      } finally {
-        btn.disabled = false;
-        btn.innerText = 'Registrar Gasto';
-      }
-    };
-
-    window.deleteExpense = async function(id) {
-      if (!confirm("¿Deseas eliminar este gasto?")) return;
-      await syncDelete('gastos', id);
-      db.gastos = db.gastos.filter(g => g.id != id);
+      await syncInsert('gastos', record);
+      db.gastos.push(record);
+      closeModal('modal-expense');
       renderAll();
     };
 
+    window.deleteExpense = async function(id) {
+      if (confirm("¿Estás seguro de eliminar este gasto?")) {
+        await syncDelete('gastos', id);
+        db.gastos = db.gastos.filter(g => g.id !== id);
+        renderAll();
+      }
+    };
+
+    window.renderOrders = function() {
+      const tbody = document.getElementById('orders-table-body');
+      if (!tbody) return;
+
+      if (!db.encargos || db.encargos.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-slate-500">No hay encargos de importación registrados.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = db.encargos.map(o => {
+        const client = db.clientes.find(c => c.id === o.cliente_id) || { nombre: 'Cliente General', apellido: '' };
+        let statusBadge = '';
+        if (o.estado === 'LOST') {
+          statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30">EXTRAVIADO</span>`;
+        } else if (o.estado === 'ARRIVED') {
+          statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">DISPONIBLE / ENTREGADO</span>`;
+        } else {
+          statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">EN TRÁNSITO</span>`;
+        }
+
+        return `
+          <tr class="hover:bg-slate-700/30 transition">
+            <td class="px-4 py-3">
+              <span class="font-bold text-white block">${o.producto_nombre} ${o.variante ? `(${o.variante})` : ''}</span>
+              <span class="text-xs text-slate-400">Cant: ${o.cantidad}</span>
+            </td>
+            <td class="px-4 py-3 text-slate-300 font-medium">${client.nombre} ${client.apellido}</td>
+            <td class="px-4 py-3">
+              <span class="text-white block text-xs font-semibold">${o.proveedor}</span>
+              <span class="text-emerald-400 text-xs">$${parseFloat(o.costo_fabrica).toFixed(2)}</span>
+            </td>
+            <td class="px-4 py-3 text-xs text-slate-300">
+              <span class="block font-semibold text-indigo-400">${o.ruta === 'RUTA_B' ? 'Ruta B (USA)' : 'Ruta A (Col)'}</span>
+            </td>
+            <td class="px-4 py-3 font-mono text-xs text-slate-400">
+              Origen: ${o.tracking_origen || 'N/A'}<br/>
+              Inter: ${o.tracking_inter || 'N/A'}
+            </td>
+            <td class="px-4 py-3">${statusBadge}</td>
+            <td class="px-4 py-3 text-right">
+              <div class="flex items-center justify-end gap-1">
+                <button onclick="openTrackingModal('${o.id}')" title="Tracking / Escala" class="p-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-slate-200 transition"><i data-lucide="truck" class="w-4 h-4"></i></button>
+                <button onclick="openLostModal('${o.id}')" title="Reportar Extraviado" class="p-1.5 bg-rose-500/20 hover:bg-rose-500/30 rounded-lg text-rose-400 transition"><i data-lucide="alert-triangle" class="w-4 h-4"></i></button>
+                <button onclick="deleteOrder('${o.id}')" title="Eliminar Encargo" class="p-1.5 bg-rose-500/20 hover:bg-rose-500/30 rounded-lg text-rose-400 transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+      lucide.createIcons();
+    };
+
+    window.openOrderModal = function() {
+      document.getElementById('form-order').reset();
+      document.getElementById('order-id').value = '';
+      populateDropdowns();
+      openModal('modal-order');
+    };
+
+    window.handleOrderSubmit = async function(e) {
+      e.preventDefault();
+      const fileInput = document.getElementById('order-invoice-file');
+      let invoiceUrl = '';
+      if (fileInput.files.length > 0) {
+        invoiceUrl = await uploadSupabaseStorageFile(fileInput.files[0], 'documentos');
+      }
+
+      const record = {
+        id: Date.now().toString(),
+        cliente_id: document.getElementById('order-client-select').value,
+        producto_nombre: document.getElementById('order-prod-name').value,
+        variante: document.getElementById('order-prod-variant').value,
+        cantidad: parseInt(document.getElementById('order-prod-qty').value),
+        proveedor: document.getElementById('order-supplier-name').value,
+        costo_fabrica: parseFloat(document.getElementById('order-factory-cost').value),
+        fecha_compra: document.getElementById('order-purchase-date').value,
+        factura_url: invoiceUrl,
+        ruta: document.getElementById('order-route').value,
+        tracking_origen: document.getElementById('order-tracking-orig').value,
+        tracking_inter: '',
+        estado: 'TRANSIT'
+      };
+
+      await syncInsert('encargos', record);
+      db.encargos.push(record);
+      closeModal('modal-order');
+      renderAll();
+    };
+
+    window.openTrackingModal = function(orderId) {
+      const order = db.encargos.find(o => o.id === orderId);
+      if (!order) return;
+      document.getElementById('inter-order-id').value = order.id;
+      document.getElementById('inter-tracking-code').value = order.tracking_inter || '';
+      document.getElementById('inter-freight-cost').value = '0.00';
+      
+      const trackingUrl = order.tracking_inter ? `https://www.google.com/search?q=${encodeURIComponent(order.tracking_inter)}` : 'about:blank';
+      document.getElementById('tracking-iframe').src = trackingUrl;
+      document.getElementById('tracking-iframe-label').innerText = order.tracking_inter ? `Guía: ${order.tracking_inter}` : 'Sin guía intermedia';
+
+      openModal('modal-tracking');
+    };
+
+    window.handleInterScaleSubmit = async function(e) {
+      e.preventDefault();
+      const orderId = document.getElementById('inter-order-id').value;
+      const trackingInter = document.getElementById('inter-tracking-code').value;
+      const freightCost = parseFloat(document.getElementById('inter-freight-cost').value) || 0;
+
+      const order = db.encargos.find(o => o.id === orderId);
+      if (!order) return;
+
+      order.tracking_inter = trackingInter;
+      await syncUpdate('encargos', order.id, { tracking_inter: trackingInter });
+
+      if (freightCost > 0) {
+        const expenseRecord = {
+          id: Date.now().toString(),
+          concepto: `Flete/Aduana adicional encargo ${order.producto_nombre}`,
+          categoria: 'Flete/Logística',
+          monto_usd: freightCost,
+          fecha: new Date().toISOString().slice(0,10)
+        };
+        await syncInsert('gastos', expenseRecord);
+        db.gastos.push(expenseRecord);
+      }
+
+      alert("Escala actualizada y costos registrados correctamente.");
+      closeModal('modal-tracking');
+      renderAll();
+    };
+
+    window.openLostModal = function(orderId) {
+      document.getElementById('form-lost').reset();
+      document.getElementById('lost-order-id').value = orderId;
+      openModal('modal-lost');
+    };
+
+    window.handleLostSubmit = async function(e) {
+      e.preventDefault();
+      const orderId = document.getElementById('lost-order-id').value;
+      const reason = document.getElementById('lost-reason').value;
+      const order = db.encargos.find(o => o.id === orderId);
+      if (!order) return;
+
+      order.estado = 'LOST';
+      await syncUpdate('encargos', order.id, { estado: 'LOST' });
+
+      // Registrar pérdida como gasto
+      const lossExpense = {
+        id: Date.now().toString(),
+        concepto: `Pérdida/Extravío encargo: ${order.producto_nombre} (${reason})`,
+        categoria: 'Pérdida/Extravío',
+        monto_usd: parseFloat(order.costo_fabrica) * parseInt(order.cantidad),
+        fecha: new Date().toISOString().slice(0,10)
+      };
+      await syncInsert('gastos', lossExpense);
+      db.gastos.push(lossExpense);
+
+      closeModal('modal-lost');
+      renderAll();
+      alert("Encargo marcado como extraviado y pérdida registrada en gastos.");
+    };
+
+    window.deleteOrder = async function(id) {
+      if (confirm("¿Estás seguro de eliminar este encargo?")) {
+        await syncDelete('encargos', id);
+        db.encargos = db.encargos.filter(o => o.id !== id);
+        renderAll();
+      }
+    };
+
     function populateDropdowns() {
-      const clientSelects = [
-        document.getElementById('order-client-select'),
-        document.getElementById('sale-client-select')
-      ];
-      const clientOptions = db.clientes.map(c => `<option value="${c.id}">${c.nombre} ${c.apellido} (${c.telefono})</option>`).join('');
-      clientSelects.forEach(sel => { if (sel) sel.innerHTML = clientOptions || '<option value="">No hay clientes</option>'; });
+      const clientSelects = [document.getElementById('order-client-select'), document.getElementById('sale-client-select')];
+      clientSelects.forEach(sel => {
+        if (!sel) return;
+        sel.innerHTML = db.clientes.length > 0 
+          ? db.clientes.map(c => `<option value="${c.id}">${c.nombre} ${c.apellido} (${c.telefono})</option>`).join('')
+          : '<option value="">-- No hay clientes registrados --</option>';
+      });
 
       const prodSelect = document.getElementById('sale-product-select');
       if (prodSelect) {
-        prodSelect.innerHTML = db.productos.map(p => `<option value="${p.id}">${p.nombre} (Stock: ${p.stock}) - $${p.precio_venta}</option>`).join('') || '<option value="">No hay productos</option>';
+        prodSelect.innerHTML = db.productos.length > 0
+          ? db.productos.map(p => `<option value="${p.id}">${p.nombre} - Stock: ${p.stock} - $${p.precio_venta}</option>`).join('')
+          : '<option value="">-- No hay productos en stock --</option>';
       }
     }
   </script>
