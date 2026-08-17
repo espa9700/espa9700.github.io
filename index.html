@@ -2150,8 +2150,11 @@
       document.getElementById('inter-tracking-code').value = order.tracking_inter || '';
       document.getElementById('inter-freight-cost').value = '0.00';
       
-      const trackingUrl = order.tracking_inter ? `https://www.google.com/search?q=${encodeURIComponent(order.tracking_inter)}` : 'about:blank';
-      document.getElementById('tracking-iframe').src = trackingUrl;
+      // En lugar de apuntar a Google, apunta a ParcelsApp pasando el número de tracking
+const trackingCode = order.tracking_inter || order.tracking_origen || '';
+    const trackingUrl = `https://parcelsapp.com/es/tracking/${trackingCode}`;
+    
+    document.getElementById('tracking-iframe').src = trackingUrl;
       document.getElementById('tracking-iframe-label').innerText = order.tracking_inter ? `Guía: ${order.tracking_inter}` : 'Sin guía intermedia';
 
       openModal('modal-tracking');
