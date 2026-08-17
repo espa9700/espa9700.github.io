@@ -148,6 +148,10 @@
           <i data-lucide="package" class="w-5 h-5"></i>
           <span class="font-medium">Inventario</span>
         </button>
+        <button onclick="switchTab('orders')" id="nav-btn-orders" class="nav-link w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-700/50 hover:text-white transition">
+          <i data-lucide="truck" class="w-5 h-5"></i>
+          <span class="font-medium">Encargos</span>
+        </button>
         <button onclick="switchTab('sales')" id="nav-btn-sales" class="nav-link w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-700/50 hover:text-white transition">
           <i data-lucide="shopping-bag" class="w-5 h-5"></i>
           <span class="font-medium">Ventas (POS)</span>
@@ -172,6 +176,10 @@
       <button onclick="switchTab('inventory')" id="mobile-nav-inventory" class="mobile-nav-link flex flex-col items-center text-xs text-slate-400 p-1">
         <i data-lucide="package" class="w-5 h-5"></i>
         <span>Stock</span>
+      </button>
+      <button onclick="switchTab('orders')" id="mobile-nav-orders" class="mobile-nav-link flex flex-col items-center text-xs text-slate-400 p-1">
+        <i data-lucide="truck" class="w-5 h-5"></i>
+        <span>Encargos</span>
       </button>
       <button onclick="switchTab('sales')" id="mobile-nav-sales" class="mobile-nav-link flex flex-col items-center text-xs text-slate-400 p-1">
         <i data-lucide="shopping-bag" class="w-5 h-5"></i>
@@ -319,7 +327,40 @@
         </div>
       </section>
 
-      <!-- 3. SALES / POS TAB -->
+      <!-- 3. ENCARGOS TAB (NUEVA SECCIÓN) -->
+      <section id="tab-orders" class="tab-content space-y-6 hidden">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h2 class="text-2xl font-bold text-white">Gestión de Encargos y Triangulación</h2>
+            <p class="text-xs text-slate-400">Rastreo de envíos intermedios, costos logísticos e importación en tránsito</p>
+          </div>
+          <button onclick="openOrderModal()" class="bg-emerald-500 hover:bg-emerald-600 text-slate-900 font-bold px-4 py-2 rounded-xl flex items-center gap-2 transition shadow-lg shadow-emerald-500/20">
+            <i data-lucide="plus-circle" class="w-5 h-5"></i>
+            <span>Nuevo Encargo</span>
+          </button>
+        </div>
+
+        <div class="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+              <thead class="bg-slate-900/60 text-slate-400 text-xs uppercase font-semibold border-b border-slate-700">
+                <tr>
+                  <th class="px-4 py-3">Encargo / Producto</th>
+                  <th class="px-4 py-3">Cliente</th>
+                  <th class="px-4 py-3">Proveedor / Costo</th>
+                  <th class="px-4 py-3">Ruta / Escala</th>
+                  <th class="px-4 py-3">Tracking</th>
+                  <th class="px-4 py-3">Estado</th>
+                  <th class="px-4 py-3 text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="orders-table-body" class="divide-y divide-slate-700/60"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. SALES / POS TAB -->
       <section id="tab-sales" class="tab-content space-y-6 hidden">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
@@ -358,7 +399,7 @@
         </div>
       </section>
 
-      <!-- 4. CUSTOMERS TAB -->
+      <!-- 5. CUSTOMERS TAB -->
       <section id="tab-customers" class="tab-content space-y-6 hidden">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
@@ -381,7 +422,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="customers-cards-container"></div>
       </section>
 
-      <!-- 5. EXPENSES TAB -->
+      <!-- 6. EXPENSES TAB -->
       <section id="tab-expenses" class="tab-content space-y-6 hidden">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
@@ -412,6 +453,148 @@
         </div>
       </section>
     </main>
+  </div>
+
+  <!-- MODAL NUEVO/EDITAR ENCARGO -->
+  <div id="modal-order" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop hidden overflow-y-auto">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-xl p-6 shadow-2xl relative my-8 max-h-[90vh] overflow-y-auto">
+      <button onclick="closeModal('modal-order')" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      <h3 class="text-xl font-bold text-white mb-4" id="modal-order-title">Nuevo Encargo de Importación</h3>
+      <form id="form-order" onsubmit="handleOrderSubmit(event)" class="space-y-4">
+        <input type="hidden" id="order-id" />
+        
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Cliente Vinculado *</label>
+          <select id="order-client-select" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500">
+            <!-- Carga dinámica -->
+          </select>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Producto *</label>
+            <input type="text" id="order-prod-name" required placeholder="Nombre producto" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Variante / Modelo</label>
+            <input type="text" id="order-prod-variant" placeholder="Ej. Negro L, 64GB" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Cantidad *</label>
+            <input type="number" id="order-prod-qty" min="1" value="1" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500" />
+          </div>
+        </div>
+
+        <div class="border border-slate-700 rounded-xl p-3 bg-slate-900/40 space-y-3">
+          <span class="text-xs font-bold text-emerald-400 uppercase block">Datos del Proveedor</span>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Proveedor *</label>
+              <input type="text" id="order-supplier-name" required placeholder="Ej. Taobao, AliExpress" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500" />
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Costo Fábrica ($) *</label>
+              <input type="number" step="0.01" min="0" id="order-factory-cost" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500" />
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Fecha Compra *</label>
+              <input type="date" id="order-purchase-date" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Factura de Compra (PDF / Imagen)</label>
+            <input type="file" id="order-invoice-file" accept="image/*,application/pdf" class="w-full text-xs text-slate-400 file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:bg-slate-700 file:text-slate-200 cursor-pointer" />
+            <div id="order-invoice-link-display" class="mt-1 text-xs"></div>
+          </div>
+        </div>
+
+        <div class="border border-slate-700 rounded-xl p-3 bg-slate-900/40 space-y-3">
+          <span class="text-xs font-bold text-emerald-400 uppercase block">Triangulación & Tracking Inicial</span>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Ruta de Triangulación</label>
+              <select id="order-route" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500">
+                <option value="RUTA_A">Ruta A: Proveedor -> Colombia -> Venezuela</option>
+                <option value="RUTA_B">Ruta B: Proveedor -> USA -> Venezuela</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Tracking Origen / Transportadora</label>
+              <input type="text" id="order-tracking-orig" placeholder="Número de guía origen" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500" />
+            </div>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeModal('modal-order')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-xl text-sm font-semibold transition">Cancelar</button>
+          <button type="submit" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-slate-900 rounded-xl text-sm font-bold transition">Guardar Encargo</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL ESCALA INTERMEDIA & RASTREO -->
+  <div id="modal-tracking" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop hidden overflow-y-auto">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-3xl p-6 shadow-2xl relative my-8 max-h-[90vh] overflow-y-auto">
+      <button onclick="closeModal('modal-tracking')" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      <h3 class="text-xl font-bold text-white mb-2" id="tracking-modal-title">Tracking en Vivo y Escala Intermedia</h3>
+      <p class="text-xs text-slate-400 mb-4" id="tracking-modal-subtitle">Actualizar información de transporte y fletes adicionales</p>
+
+      <div class="space-y-4">
+        <form id="form-inter-scale" onsubmit="handleInterScaleSubmit(event)" class="bg-slate-900/60 border border-slate-700 rounded-xl p-4 space-y-3">
+          <input type="hidden" id="inter-order-id" />
+          <h4 class="text-xs font-bold uppercase text-emerald-400">Actualizar Escala Intermedia (Colombia / EEUU)</h4>
+          
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Nuevo Tracking Intermedio</label>
+              <input type="text" id="inter-tracking-code" required placeholder="Número de guía internacional" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500" />
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Costo Flete/Aduana Adicional ($ USD)</label>
+              <input type="number" step="0.01" min="0" id="inter-freight-cost" value="0.00" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500" />
+              <p class="text-[10px] text-slate-500 mt-0.5">* Se registrará automáticamente como gasto operativo si es > 0.</p>
+            </div>
+          </div>
+          <button type="submit" class="px-3 py-2 bg-emerald-500 hover:bg-emerald-600 text-slate-900 rounded-lg text-xs font-bold transition">Actualizar Guía y Registrar Costos</button>
+        </form>
+
+        <div class="border border-slate-700 rounded-xl overflow-hidden bg-slate-900">
+          <div class="p-3 bg-slate-800 border-b border-slate-700 flex justify-between items-center">
+            <span class="text-xs font-bold text-slate-300">Visor de Rastreador Web</span>
+            <span class="text-[10px] text-slate-400" id="tracking-iframe-label">Consultando guía...</span>
+          </div>
+          <div class="relative w-full h-80 bg-slate-950">
+            <iframe id="tracking-iframe" class="w-full h-full border-0" src="about:blank"></iframe>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL MARCAR EXTRAVIADO -->
+  <div id="modal-lost" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop hidden">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
+      <button onclick="closeModal('modal-lost')" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      <h3 class="text-xl font-bold text-rose-400 mb-2">Reportar Paquete Extraviado</h3>
+      <p class="text-xs text-slate-400 mb-4">Esta acción registrará la pérdida financiera directamente en la tabla de Gastos.</p>
+      
+      <form id="form-lost" onsubmit="handleLostSubmit(event)" class="space-y-3">
+        <input type="hidden" id="lost-order-id" />
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Motivo / Justificación *</label>
+          <textarea id="lost-reason" required rows="3" placeholder="Detalle la razón de la pérdida o extravío..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-100 focus:outline-none focus:border-rose-500"></textarea>
+        </div>
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Documento / Imagen de Prueba</label>
+          <input type="file" id="lost-proof-file" accept="image/*,application/pdf" class="w-full text-xs text-slate-400 file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:bg-slate-700 file:text-slate-200 cursor-pointer" />
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeModal('modal-lost')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-xl text-sm font-semibold transition">Cancelar</button>
+          <button type="submit" class="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-sm font-bold transition">Confirmar Pérdida</button>
+        </div>
+      </form>
+    </div>
   </div>
 
   <!-- AUTHENTICATION & USER MODAL -->
@@ -477,7 +660,7 @@
     </div>
   </div>
 
-  <!-- MODAL DE FACTURA PROFESIONAL (ESTRUCTURA DE IMPRESIÓN OPTIMIZADA Y BOTONES PDF/EXCEL) -->
+  <!-- MODAL DE FACTURA PROFESIONAL -->
   <div id="modal-invoice" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop hidden overflow-y-auto">
     <div id="invoice-card-wrapper" class="bg-white text-slate-900 rounded-2xl w-full max-w-xl p-6 sm:p-8 shadow-2xl relative my-8">
       <div class="no-print absolute top-4 right-4 flex items-center gap-2">
@@ -767,6 +950,7 @@
               <option value="Empaque/Cajas">Empaque / Cajas</option>
               <option value="Alquiler/Servicios">Alquiler / Servicios</option>
               <option value="Publicidad">Publicidad / Marketing</option>
+              <option value="Pérdida/Extravío">Pérdida / Extravío</option>
               <option value="Otro">Otro</option>
             </select>
           </div>
@@ -806,7 +990,7 @@
     </div>
   </div>
 
-  <!-- SCRIPT BASE CON EXPORTACIÓN A EXCEL Y PDF INTEGRADA Y FUNCIONALIDAD POS COMPLETA -->
+  <!-- SCRIPT BASE CON EXPORTACIÓN A EXCEL, PDF Y MÓDULO DE ENCARGOS COMPLETO -->
   <script>
     let SUPABASE_URL = localStorage.getItem('IMPORTREBEL_SUPABASE_URL') || '';
     let SUPABASE_ANON_KEY = localStorage.getItem('IMPORTREBEL_SUPABASE_KEY') || '';
@@ -816,7 +1000,7 @@
     let currentRate = 36.50;
     let isManualRate = false;
 
-    let db = { clientes: [], productos: [], ventas: [], abonos: [], gastos: [] };
+    let db = { clientes: [], productos: [], ventas: [], abonos: [], gastos: [], encargos: [] };
 
     let activeSalesFilter = 'ALL';
     let financialChartInstance = null;
@@ -953,7 +1137,7 @@
     window.handleSignOut = async function() {
       if (supabaseClient) await supabaseClient.auth.signOut();
       currentUser = null;
-      db = { clientes: [], productos: [], ventas: [], abonos: [], gastos: [] };
+      db = { clientes: [], productos: [], ventas: [], abonos: [], gastos: [], encargos: [] };
       closeModal('modal-auth');
       renderAll();
     };
@@ -961,18 +1145,20 @@
     async function loadAllData() {
       if (supabaseClient && currentUser) {
         try {
-          const [resC, resP, resV, resA, resG] = await Promise.all([
+          const [resC, resP, resV, resA, resG, resE] = await Promise.all([
             supabaseClient.from('clientes').select('*').eq('user_id', currentUser.id),
             supabaseClient.from('productos').select('*').eq('user_id', currentUser.id),
             supabaseClient.from('ventas').select('*').eq('user_id', currentUser.id),
             supabaseClient.from('abonos').select('*').eq('user_id', currentUser.id),
-            supabaseClient.from('gastos').select('*').eq('user_id', currentUser.id)
+            supabaseClient.from('gastos').select('*').eq('user_id', currentUser.id),
+            supabaseClient.from('encargos').select('*').eq('user_id', currentUser.id)
           ]);
           db.clientes = resC.data || [];
           db.productos = (resP.data || []).map(p => ({ ...p, imagenes_json: typeof p.imagenes_json === 'string' ? JSON.parse(p.imagenes_json) : p.imagenes_json }));
           db.ventas = (resV.data || []).map(v => ({ ...v, items_json: typeof v.items_json === 'string' ? JSON.parse(v.items_json) : v.items_json }));
           db.abonos = resA.data || [];
           db.gastos = resG.data || [];
+          db.encargos = resE.data || [];
           return;
         } catch (e) { console.error(e); }
       }
@@ -983,8 +1169,15 @@
       const storageKey = currentUser ? `IMPORTREBEL_DB_${currentUser.id}` : 'IMPORTREBEL_DATABASE';
       const localData = localStorage.getItem(storageKey);
       if (localData) {
-        try { db = JSON.parse(localData); } catch (e) { db = { clientes: [], productos: [], ventas: [], abonos: [], gastos: [] }; }
-      } else { db = { clientes: [], productos: [], ventas: [], abonos: [], gastos: [] }; }
+        try { 
+          db = JSON.parse(localData); 
+          if (!db.encargos) db.encargos = [];
+        } catch (e) { 
+          db = { clientes: [], productos: [], ventas: [], abonos: [], gastos: [], encargos: [] }; 
+        }
+      } else { 
+        db = { clientes: [], productos: [], ventas: [], abonos: [], gastos: [], encargos: [] }; 
+      }
     }
 
     function saveLocalData() {
@@ -1023,6 +1216,31 @@
       saveLocalData();
     }
 
+    // HELPER SUBIDA STORAGE SUPABASE CON CACHE / FALLBACK LOCAL
+    async function uploadSupabaseStorageFile(file, bucket = 'documentos') {
+      if (!file) return null;
+      if (supabaseClient && currentUser) {
+        try {
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${currentUser.id}/${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+          const { data, error } = await supabaseClient.storage.from(bucket).upload(fileName, file);
+          if (error) {
+            console.warn("Storage warning, falling back to base64:", error.message);
+          } else {
+            const { data: publicUrlData } = supabaseClient.storage.from(bucket).getPublicUrl(fileName);
+            return publicUrlData.publicUrl;
+          }
+        } catch (e) {
+          console.warn("Storage Exception, fallback to DataURL:", e);
+        }
+      }
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.readAsDataURL(file);
+      });
+    }
+
     window.saveSupabaseConfig = function(e) {
       e.preventDefault();
       const url = document.getElementById('cfg-supabase-url').value.trim();
@@ -1058,6 +1276,7 @@
       reader.onload = function(e) {
         try {
           db = JSON.parse(e.target.result);
+          if (!db.encargos) db.encargos = [];
           saveLocalData();
           renderAll();
           alert("Base de datos importada exitosamente.");
@@ -1139,6 +1358,7 @@
     function renderAll() {
       renderDashboard();
       renderInventory();
+      renderOrders();
       renderSales();
       renderCustomers();
       renderExpenses();
@@ -1399,6 +1619,249 @@
       }
     };
 
+    // MÓDULO ENCARGOS: RENDER Y MÉTODOS LOGÍSTICOS
+    window.renderOrders = function() {
+      const tbody = document.getElementById('orders-table-body');
+      if (!tbody) return;
+
+      if (!db.encargos || db.encargos.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-slate-500">No hay encargos o importaciones registradas.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = db.encargos.map(o => {
+        const client = db.clientes.find(c => c.id === o.cliente_id) || { nombre: 'Cliente', apellido: 'Desconocido' };
+        const routeLabel = o.ruta === 'RUTA_A' ? 'Proveedor ➔ Colombia ➔ VZLA' : 'Proveedor ➔ USA ➔ VZLA';
+        
+        let statusBadge = '<span class="px-2 py-0.5 text-xs rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold">En Tránsito</span>';
+        if (o.estado === 'Entregado') statusBadge = '<span class="px-2 py-0.5 text-xs rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">Entregado</span>';
+        if (o.estado === 'Extraviado') statusBadge = '<span class="px-2 py-0.5 text-xs rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 font-bold">Extraviado</span>';
+
+        return `
+          <tr class="hover:bg-slate-700/30 transition text-xs">
+            <td class="px-4 py-3">
+              <div class="font-bold text-white text-sm">${o.producto_nombre}</div>
+              <div class="text-slate-400">${o.producto_variante || 'Sin variante'} x ${o.cantidad} unids</div>
+              ${o.factura_url ? `<a href="${o.factura_url}" target="_blank" class="text-emerald-400 underline font-semibold mt-0.5 inline-block">Ver Factura Proveedor</a>` : ''}
+            </td>
+            <td class="px-4 py-3 font-medium text-slate-200">${client.nombre} ${client.apellido}</td>
+            <td class="px-4 py-3">
+              <div class="font-bold text-slate-200">${o.proveedor_nombre}</div>
+              <div class="text-emerald-400 font-mono">$${parseFloat(o.costo_fabrica).toFixed(2)} USD</div>
+              <div class="text-[10px] text-slate-400">${o.fecha_compra}</div>
+            </td>
+            <td class="px-4 py-3 text-slate-300 font-medium">${routeLabel}</td>
+            <td class="px-4 py-3 font-mono">
+              <div><span class="text-slate-500">Origen:</span> ${o.tracking_origen || 'N/A'}</div>
+              <div><span class="text-emerald-400">Interm:</span> ${o.tracking_intermedio || 'Pendiente'}</div>
+            </td>
+            <td class="px-4 py-3">${statusBadge}</td>
+            <td class="px-4 py-3 text-right space-x-1">
+              ${o.estado === 'En Tránsito' ? `
+                <button onclick="openTrackingModal('${o.id}')" title="Tracking Escala" class="p-1.5 bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 rounded transition"><i data-lucide="map-pin" class="w-4 h-4"></i></button>
+                <button onclick="confirmOrderReceived('${o.id}')" title="Confirmar Recepción" class="p-1.5 bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 rounded transition"><i data-lucide="check-circle" class="w-4 h-4"></i></button>
+                <button onclick="openLostModal('${o.id}')" title="Marcar Extraviado" class="p-1.5 bg-rose-500/20 text-rose-400 hover:bg-rose-500/30 rounded transition"><i data-lucide="alert-triangle" class="w-4 h-4"></i></button>
+              ` : ''}
+              <button onclick="deleteOrder('${o.id}')" title="Eliminar Encargo" class="p-1.5 bg-slate-700 text-slate-400 hover:bg-slate-600 rounded transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+      lucide.createIcons();
+    };
+
+    window.openOrderModal = function() {
+      const clientSelect = document.getElementById('order-client-select');
+      clientSelect.innerHTML = db.clientes.map(c => `<option value="${c.id}">${c.nombre} ${c.apellido} (${c.telefono})</option>`).join('');
+      if (db.clientes.length === 0) {
+        clientSelect.innerHTML = `<option value="">No hay clientes. Crea uno primero.</option>`;
+      }
+      document.getElementById('form-order').reset();
+      document.getElementById('order-id').value = '';
+      document.getElementById('order-purchase-date').value = new Date().toISOString().slice(0,10);
+      document.getElementById('order-invoice-link-display').innerHTML = '';
+      openModal('modal-order');
+    };
+
+    window.handleOrderSubmit = async function(e) {
+      e.preventDefault();
+      const clientSelect = document.getElementById('order-client-select');
+      if (!clientSelect.value) { alert("Debes seleccionar un cliente válido."); return; }
+
+      const fileInput = document.getElementById('order-invoice-file');
+      let uploadedUrl = null;
+      if (fileInput.files.length > 0) {
+        uploadedUrl = await uploadSupabaseStorageFile(fileInput.files[0], 'facturas_proveedores');
+      }
+
+      const id = 'ENC-' + Date.now();
+      const newOrder = {
+        id,
+        cliente_id: clientSelect.value,
+        producto_nombre: document.getElementById('order-prod-name').value,
+        producto_variante: document.getElementById('order-prod-variant').value,
+        cantidad: parseInt(document.getElementById('order-prod-qty').value),
+        proveedor_nombre: document.getElementById('order-supplier-name').value,
+        costo_fabrica: parseFloat(document.getElementById('order-factory-cost').value),
+        fecha_compra: document.getElementById('order-purchase-date').value,
+        factura_url: uploadedUrl,
+        ruta: document.getElementById('order-route').value,
+        tracking_origen: document.getElementById('order-tracking-orig').value,
+        tracking_intermedio: '',
+        flete_intermedio_costo: 0,
+        estado: 'En Tránsito'
+      };
+
+      if (!db.encargos) db.encargos = [];
+      db.encargos.push(newOrder);
+      await syncInsert('encargos', newOrder);
+
+      closeModal('modal-order');
+      renderAll();
+    };
+
+    window.openTrackingModal = function(orderId) {
+      const order = db.encargos.find(o => o.id === orderId);
+      if (!order) return;
+
+      document.getElementById('inter-order-id').value = order.id;
+      document.getElementById('inter-tracking-code').value = order.tracking_intermedio || '';
+      document.getElementById('inter-freight-cost').value = order.flete_intermedio_costo || 0;
+      
+      const trackingCode = order.tracking_intermedio || order.tracking_origen || '';
+      document.getElementById('tracking-modal-subtitle').innerText = `Encargo: ${order.producto_nombre} (${order.ruta})`;
+      document.getElementById('tracking-iframe-label').innerText = trackingCode ? `Rastreando: ${trackingCode}` : 'Sin código asignado';
+
+      const iframe = document.getElementById('tracking-iframe');
+      if (trackingCode) {
+        iframe.src = `https://www.17track.net/es/track?nums=${encodeURIComponent(trackingCode)}`;
+      } else {
+        iframe.src = 'about:blank';
+      }
+
+      openModal('modal-tracking');
+    };
+
+    window.handleInterScaleSubmit = async function(e) {
+      e.preventDefault();
+      const id = document.getElementById('inter-order-id').value;
+      const order = db.encargos.find(o => o.id === id);
+      if (!order) return;
+
+      const newTracking = document.getElementById('inter-tracking-code').value;
+      const freightCost = parseFloat(document.getElementById('inter-freight-cost').value) || 0;
+
+      order.tracking_intermedio = newTracking;
+      const previousFreight = order.flete_intermedio_costo || 0;
+      order.flete_intermedio_costo = freightCost;
+
+      await syncUpdate('encargos', id, order);
+
+      // Si hay un costo adicional de flete nuevo, insertarlo automáticamente en GASTOS
+      const addedCost = freightCost - previousFreight;
+      if (addedCost > 0) {
+        const expenseId = 'EXP-LOG-' + Date.now();
+        const routeName = order.ruta === 'RUTA_A' ? 'Colombia' : 'USA';
+        const newExpense = {
+          id: expenseId,
+          concepto: `Flete/Aduana Intermedia (${routeName}) - ${order.producto_nombre}`,
+          categoria: 'Flete/Logística',
+          monto_usd: addedCost,
+          fecha: new Date().toISOString().slice(0,10)
+        };
+        db.gastos.push(newExpense);
+        await syncInsert('gastos', newExpense);
+      }
+
+      closeModal('modal-tracking');
+      renderAll();
+      alert("Escala de triangulación actualizada y gastos sincronizados.");
+    };
+
+    window.confirmOrderReceived = async function(orderId) {
+      const order = db.encargos.find(o => o.id === orderId);
+      if (!order) return;
+
+      if (!confirm(`¿Confirmar recepción del paquete "${order.producto_nombre}" en Venezuela? Se sumarán ${order.cantidad} unidades al inventario principal.`)) return;
+
+      // Actualizar o crear producto en inventario
+      let prod = db.productos.find(p => p.nombre.toLowerCase() === order.producto_nombre.toLowerCase());
+      if (prod) {
+        prod.stock += order.cantidad;
+        await syncUpdate('productos', prod.id, prod);
+      } else {
+        const newProdId = 'PRD-' + Date.now();
+        const costTotalUnit = order.costo_fabrica + ((order.flete_intermedio_costo || 0) / order.cantidad);
+        prod = {
+          id: newProdId,
+          nombre: order.producto_nombre,
+          sku: 'IMP-' + Math.floor(1000 + Math.random() * 9000),
+          stock: order.cantidad,
+          precio_costo: parseFloat(costTotalUnit.toFixed(2)),
+          precio_venta: parseFloat((costTotalUnit * 1.35).toFixed(2)),
+          imagenes_json: []
+        };
+        db.productos.push(prod);
+        await syncInsert('productos', prod);
+      }
+
+      order.estado = 'Entregado';
+      await syncUpdate('encargos', order.id, order);
+
+      renderAll();
+      alert("¡Encargo recibido e inventario actualizado exitosamente!");
+    };
+
+    window.openLostModal = function(orderId) {
+      document.getElementById('lost-order-id').value = orderId;
+      document.getElementById('form-lost').reset();
+      openModal('modal-lost');
+    };
+
+    window.handleLostSubmit = async function(e) {
+      e.preventDefault();
+      const id = document.getElementById('lost-order-id').value;
+      const order = db.encargos.find(o => o.id === id);
+      if (!order) return;
+
+      const reason = document.getElementById('lost-reason').value;
+      const proofInput = document.getElementById('lost-proof-file');
+
+      let proofUrl = null;
+      if (proofInput.files.length > 0) {
+        proofUrl = await uploadSupabaseStorageFile(proofInput.files[0], 'pruebas_perdidas');
+      }
+
+      order.estado = 'Extraviado';
+      order.motivo_perdida = reason;
+      order.prueba_perdida_url = proofUrl;
+      await syncUpdate('encargos', id, order);
+
+      // Registrar pérdida total en Gastos
+      const totalLossUSD = order.costo_fabrica + (order.flete_intermedio_costo || 0);
+      const lossExpense = {
+        id: 'EXP-LOSS-' + Date.now(),
+        concepto: `PÉRDIDA / EXTRAVÍO ENCARGO: ${order.producto_nombre} (${reason})`,
+        categoria: 'Pérdida/Extravío',
+        monto_usd: totalLossUSD,
+        fecha: new Date().toISOString().slice(0,10)
+      };
+      db.gastos.push(lossExpense);
+      await syncInsert('gastos', lossExpense);
+
+      closeModal('modal-lost');
+      renderAll();
+      alert("Pérdida reportada y asentada en el módulo de Gastos.");
+    };
+
+    window.deleteOrder = async function(id) {
+      if (confirm('¿Eliminar registro de encargo?')) {
+        db.encargos = db.encargos.filter(o => o.id !== id);
+        await syncDelete('encargos', id);
+        renderAll();
+      }
+    };
+
     window.renderCustomers = function() {
       const query = (document.getElementById('customer-search')?.value || '').toLowerCase();
       const container = document.getElementById('customers-cards-container');
@@ -1539,76 +2002,31 @@
         btn.classList.remove('bg-emerald-500', 'text-slate-900');
         btn.classList.add('bg-slate-800', 'text-slate-300');
       });
-      const targetBtn = document.getElementById(`sale-filter-${filter}`);
-      if (targetBtn) {
-        targetBtn.classList.remove('bg-slate-800', 'text-slate-300');
-        targetBtn.classList.add('bg-emerald-500', 'text-slate-900');
+      const activeBtn = document.getElementById(`sale-filter-${filter}`);
+      if (activeBtn) {
+        activeBtn.classList.remove('bg-slate-800', 'text-slate-300');
+        activeBtn.classList.add('bg-emerald-500', 'text-slate-900');
       }
       renderSales();
     };
 
-    // GENERADOR DE FACTURA PROFESIONAL CON SOPORTE PARA PDF Y EXCEL
-    window.printInvoice = function(saleId) {
-      currentInvoiceSaleId = saleId;
-      const sale = db.ventas.find(v => v.id === saleId);
-      if (!sale) return;
-
-      const client = db.clientes.find(c => c.id === sale.cliente_id) || { nombre: 'Cliente', apellido: 'General', telefono: 'N/A', direccion: 'N/A' };
-      
-      document.getElementById('inv-number').innerText = `#INV-${sale.id}`;
-      document.getElementById('inv-date').innerText = `Fecha: ${new Date().toLocaleDateString()}`;
-      document.getElementById('inv-client-name').innerText = `${client.nombre} ${client.apellido}`;
-      document.getElementById('inv-client-phone').innerText = `Teléfono: ${client.telefono || 'N/A'}`;
-      document.getElementById('inv-client-address').innerText = client.direccion || 'Dirección no especificada';
-
-      const itemsBody = document.getElementById('inv-items-body');
-      itemsBody.innerHTML = (sale.items_json || []).map(item => {
-        const prod = db.productos.find(p => p.id === item.producto_id) || { nombre: 'Producto General' };
-        const price = parseFloat(item.precio_unitario || item.precio || 0);
-        const qty = parseInt(item.cantidad || 1);
-        const subtotal = price * qty;
-        return `
-          <tr>
-            <td class="py-2 px-1">${prod.nombre}</td>
-            <td class="py-2 px-1 text-center font-mono">${qty}</td>
-            <td class="py-2 px-1 text-right font-mono">$${price.toFixed(2)}</td>
-            <td class="py-2 px-1 text-right font-mono font-bold">$${subtotal.toFixed(2)}</td>
-          </tr>
-        `;
-      }).join('');
-
-      const totalUSD = parseFloat(sale.total_usd);
-      const totalBS = totalUSD * currentRate;
-
-      document.getElementById('inv-rate-display').innerText = `${currentRate.toFixed(2)} Bs/$`;
-      document.getElementById('inv-status-badge').innerText = sale.estado;
-      document.getElementById('inv-total-usd').innerText = `$${totalUSD.toFixed(2)}`;
-      document.getElementById('inv-total-bs').innerText = `${totalBS.toFixed(2)} Bs`;
-
-      openModal('modal-invoice');
-    };
-
-    // REGISTRO Y GESTIÓN DE VENTAS (POS)
     window.openNewSaleModal = function() {
-      if (db.clientes.length === 0) {
-        alert("Debes registrar al menos un cliente antes de realizar una venta.");
-        return;
-      }
-      if (db.productos.length === 0) {
-        alert("Debes tener productos registrados en el inventario para realizar una venta.");
-        return;
-      }
-
       saleCart = [];
-      
       const clientSelect = document.getElementById('sale-client-select');
-      clientSelect.innerHTML = db.clientes.map(c => `<option value="${c.id}">${c.nombre} ${c.apellido} (${c.telefono})</option>`).join('');
+      clientSelect.innerHTML = db.clientes.map(c => `<option value="${c.id}">${c.nombre} ${c.apellido}</option>`).join('');
+      if (db.clientes.length === 0) {
+        clientSelect.innerHTML = `<option value="">No hay clientes registrados</option>`;
+      }
 
       const prodSelect = document.getElementById('sale-product-select');
-      prodSelect.innerHTML = db.productos.map(p => `<option value="${p.id}">${p.nombre} - $${p.precio_venta} (Stock: ${p.stock})</option>`).join('');
+      prodSelect.innerHTML = db.productos.map(p => `<option value="${p.id}">${p.nombre} (Disponibles: ${p.stock}) - $${p.precio_venta}</option>`).join('');
+      if (db.productos.length === 0) {
+        prodSelect.innerHTML = `<option value="">No hay productos disponibles</option>`;
+      }
 
+      renderSaleCartTable();
       document.getElementById('sale-paid-amount').value = 0;
-      renderSaleCart();
+      updateSaleCalculations();
       openModal('modal-sale');
     };
 
@@ -1617,134 +2035,112 @@
       const qty = parseInt(document.getElementById('sale-product-qty').value) || 1;
       const prod = db.productos.find(p => p.id === prodId);
 
-      if (!prod) return;
-      if (qty > prod.stock) {
-        alert(`Stock insuficiente. Solo quedan ${prod.stock} unidades de ${prod.nombre}.`);
-        return;
-      }
+      if (!prod) { alert("Selecciona un producto válido."); return; }
+      if (qty > prod.stock) { alert(`Stock insuficiente. Solo hay ${prod.stock} disponibles.`); return; }
 
-      const existingIndex = saleCart.findIndex(item => item.producto_id === prodId);
-      if (existingIndex >= 0) {
-        if (saleCart[existingIndex].cantidad + qty > prod.stock) {
-          alert(`No puedes agregar más unidades que las disponibles en stock (${prod.stock}).`);
-          return;
-        }
-        saleCart[existingIndex].cantidad += qty;
+      const existingCartItem = saleCart.find(i => i.producto_id === prodId);
+      if (existingCartItem) {
+        if (existingCartItem.cantidad + qty > prod.stock) { alert("Supera el stock disponible."); return; }
+        existingCartItem.cantidad += qty;
       } else {
-        saleCart.push({
-          producto_id: prod.id,
-          nombre: prod.nombre,
-          precio_unitario: parseFloat(prod.precio_venta),
-          cantidad: qty
-        });
+        saleCart.push({ producto_id: prod.id, nombre: prod.nombre, cantidad: qty, precio_unitario: prod.precio_venta });
       }
 
-      renderSaleCart();
+      renderSaleCartTable();
+      updateSaleCalculations();
     };
 
-    window.removeCartItem = function(idx) {
-      saleCart.splice(idx, 1);
-      renderSaleCart();
-    };
-
-    function renderSaleCart() {
+    function renderSaleCartTable() {
       const tbody = document.getElementById('sale-cart-body');
       if (!tbody) return;
 
       if (saleCart.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-slate-500">Carrito vacío. Selecciona un producto arriba.</td></tr>`;
-      } else {
-        tbody.innerHTML = saleCart.map((item, idx) => `
-          <tr>
-            <td class="py-2">${item.nombre}</td>
-            <td class="py-2 text-center font-mono">${item.cantidad}</td>
-            <td class="py-2 text-right font-mono">$${item.precio_unitario.toFixed(2)}</td>
-            <td class="py-2 text-right font-mono font-bold text-emerald-400">$${(item.precio_unitario * item.cantidad).toFixed(2)}</td>
-            <td class="py-2 text-right">
-              <button type="button" onclick="removeCartItem(${idx})" class="text-rose-400 hover:text-rose-300 p-1"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
-            </td>
-          </tr>
-        `).join('');
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-slate-500">Carrito vacío</td></tr>`;
+        return;
       }
 
-      updateSaleCalculations();
+      tbody.innerHTML = saleCart.map((item, idx) => `
+        <tr>
+          <td class="py-2 font-medium">${item.nombre}</td>
+          <td class="py-2 text-center">${item.cantidad}</td>
+          <td class="py-2 text-right">$${item.precio_unitario.toFixed(2)}</td>
+          <td class="py-2 text-right font-bold text-emerald-400">$${(item.cantidad * item.precio_unitario).toFixed(2)}</td>
+          <td class="py-2 text-right"><button type="button" onclick="removeFromSaleCart(${idx})" class="text-rose-400 hover:text-rose-300"><i data-lucide="x" class="w-4 h-4"></i></button></td>
+        </tr>
+      `).join('');
       lucide.createIcons();
     }
 
+    window.removeFromSaleCart = function(index) {
+      saleCart.splice(index, 1);
+      renderSaleCartTable();
+      updateSaleCalculations();
+    };
+
     window.updateSaleCalculations = function() {
-      const totalUSD = saleCart.reduce((acc, item) => acc + (item.precio_unitario * item.cantidad), 0);
-      const totalBs = totalUSD * currentRate;
+      const totalUSD = saleCart.reduce((acc, i) => acc + (i.cantidad * i.precio_unitario), 0);
       const paidUSD = parseFloat(document.getElementById('sale-paid-amount').value) || 0;
       const debtUSD = Math.max(0, totalUSD - paidUSD);
 
       document.getElementById('sale-total-usd-display').innerText = `$${totalUSD.toFixed(2)}`;
-      document.getElementById('sale-total-bs-display').innerText = `${totalBs.toFixed(2)} Bs`;
+      document.getElementById('sale-total-bs-display').innerText = `${(totalUSD * currentRate).toFixed(2)} Bs`;
       document.getElementById('sale-debt-display').innerText = `$${debtUSD.toFixed(2)}`;
     };
 
     window.handleSaleSubmit = async function(e) {
       e.preventDefault();
-      if (saleCart.length === 0) {
-        alert("El carrito está vacío. Agrega al menos un producto.");
-        return;
-      }
+      if (saleCart.length === 0) { alert("El carrito no puede estar vacío."); return; }
 
-      const client_id = document.getElementById('sale-client-select').value;
-      const total_usd = saleCart.reduce((acc, item) => acc + (item.precio_unitario * item.cantidad), 0);
-      const abonado_usd = parseFloat(document.getElementById('sale-paid-amount').value) || 0;
-      const deuda_usd = Math.max(0, total_usd - abonado_usd);
-      const estado = deuda_usd <= 0 ? 'COMPLETED' : 'PENDING';
-      const saleId = 'VNT-' + Date.now().toString().slice(-6);
+      const clientSelect = document.getElementById('sale-client-select');
+      if (!clientSelect.value) { alert("Selecciona un cliente."); return; }
 
+      const totalUSD = saleCart.reduce((acc, i) => acc + (i.cantidad * i.precio_unitario), 0);
+      const paidUSD = parseFloat(document.getElementById('sale-paid-amount').value) || 0;
+      const debtUSD = Math.max(0, totalUSD - paidUSD);
+      const status = debtUSD === 0 ? 'COMPLETED' : 'PENDING';
+
+      const saleId = 'VEN-' + Date.now();
       const newSale = {
         id: saleId,
-        cliente_id,
-        items_json: saleCart,
-        total_usd,
-        abonado_usd,
-        deuda_usd,
-        estado,
-        fecha: new Date().toISOString()
+        cliente_id: clientSelect.value,
+        total_usd: totalUSD,
+        abonado_usd: paidUSD,
+        deuda_usd: debtUSD,
+        estado: status,
+        items_json: saleCart
       };
 
-      // Descontar inventario
-      saleCart.forEach(item => {
-        const prod = db.productos.find(p => p.id === item.producto_id);
+      // Descontar inventario local y remoto
+      for (const cartItem of saleCart) {
+        const prod = db.productos.find(p => p.id === cartItem.producto_id);
         if (prod) {
-          prod.stock = Math.max(0, prod.stock - item.cantidad);
-          syncUpdate('productos', prod.id, prod);
+          prod.stock = Math.max(0, prod.stock - cartItem.cantidad);
+          await syncUpdate('productos', prod.id, prod);
         }
-      });
-
-      // Si hubo un abono inicial, registrarlo en el historial
-      if (abonado_usd > 0) {
-        const abonoRec = {
-          id: 'ABO-' + Date.now(),
-          venta_id: saleId,
-          monto_usd: abonado_usd,
-          fecha: new Date().toISOString()
-        };
-        db.abonos.push(abonoRec);
-        await syncInsert('abonos', abonoRec);
       }
 
-      db.ventas.unshift(newSale);
+      db.ventas.push(newSale);
       await syncInsert('ventas', newSale);
+
+      if (paidUSD > 0) {
+        const abono = { id: 'ABO-' + Date.now(), venta_id: saleId, monto_usd: paidUSD, fecha: new Date().toISOString().slice(0,10) };
+        db.abonos.push(abono);
+        await syncInsert('abonos', abono);
+      }
 
       closeModal('modal-sale');
       renderAll();
       printInvoice(saleId);
     };
 
-    window.deleteSale = async function(saleId) {
-      if (confirm('¿Estás seguro de eliminar esta venta?')) {
-        db.ventas = db.ventas.filter(v => v.id !== saleId);
-        await syncDelete('ventas', saleId);
+    window.deleteSale = async function(id) {
+      if (confirm('¿Eliminar venta?')) {
+        db.ventas = db.ventas.filter(v => v.id !== id);
+        await syncDelete('ventas', id);
         renderAll();
       }
     };
 
-    // REGISTRO DE ABONOS
     window.openPaymentModal = function(saleId) {
       const sale = db.ventas.find(v => v.id === saleId);
       if (!sale) return;
@@ -1754,7 +2150,6 @@
       document.getElementById('pay-current-debt').innerText = `$${parseFloat(sale.deuda_usd).toFixed(2)}`;
       document.getElementById('pay-current-paid').innerText = `$${parseFloat(sale.abonado_usd).toFixed(2)}`;
       document.getElementById('pay-amount').value = '';
-
       openModal('modal-payment');
     };
 
@@ -1766,86 +2161,69 @@
 
       if (!sale || amount <= 0) return;
 
-      const currentDebt = parseFloat(sale.deuda_usd);
-      if (amount > currentDebt + 0.01) {
-        alert("El monto ingresado supera la deuda restante.");
-        return;
-      }
+      sale.abonado_usd += amount;
+      sale.deuda_usd = Math.max(0, sale.total_usd - sale.abonado_usd);
+      if (sale.deuda_usd === 0) sale.estado = 'COMPLETED';
 
-      sale.abonado_usd = parseFloat(sale.abonado_usd) + amount;
-      sale.deuda_usd = Math.max(0, parseFloat(sale.deuda_usd) - amount);
-      if (sale.deuda_usd <= 0) sale.estado = 'COMPLETED';
+      await syncUpdate('ventas', sale.id, sale);
 
-      const abonoRec = {
-        id: 'ABO-' + Date.now(),
-        venta_id: saleId,
-        monto_usd: amount,
-        fecha: new Date().toISOString()
-      };
-
-      db.abonos.push(abonoRec);
-      await syncInsert('abonos', abonoRec);
-      await syncUpdate('ventas', saleId, sale);
+      const abono = { id: 'ABO-' + Date.now(), venta_id: sale.id, monto_usd: amount, fecha: new Date().toISOString().slice(0,10) };
+      db.abonos.push(abono);
+      await syncInsert('abonos', abono);
 
       closeModal('modal-payment');
       renderAll();
     };
 
-    // RECORDATORIOS POR WHATSAPP
+    window.printInvoice = function(saleId) {
+      currentInvoiceSaleId = saleId;
+      const sale = db.ventas.find(v => v.id === saleId);
+      if (!sale) return;
+
+      const client = db.clientes.find(c => c.id === sale.cliente_id) || { nombre: 'Cliente', apellido: 'General', telefono: 'N/A', direccion: 'N/A' };
+
+      document.getElementById('inv-number').innerText = `#INV-${sale.id}`;
+      document.getElementById('inv-date').innerText = `Fecha: ${new Date().toLocaleDateString()}`;
+      document.getElementById('inv-client-name').innerText = `${client.nombre} ${client.apellido}`;
+      document.getElementById('inv-client-phone').innerText = `Teléfono: ${client.telefono}`;
+      document.getElementById('inv-client-address').innerText = client.direccion || 'Dirección no especificada';
+
+      const itemsBody = document.getElementById('inv-items-body');
+      itemsBody.innerHTML = (sale.items_json || []).map(item => `
+        <tr>
+          <td class="py-2 px-1">${item.nombre}</td>
+          <td class="py-2 px-1 text-center">${item.cantidad}</td>
+          <td class="py-2 px-1 text-right">$${parseFloat(item.precio_unitario).toFixed(2)}</td>
+          <td class="py-2 px-1 text-right font-bold">$${(item.cantidad * item.precio_unitario).toFixed(2)}</td>
+        </tr>
+      `).join('');
+
+      document.getElementById('inv-rate-display').innerText = `${currentRate.toFixed(2)} Bs/$`;
+      document.getElementById('inv-status-badge').innerText = sale.estado;
+      document.getElementById('inv-total-usd').innerText = `$${parseFloat(sale.total_usd).toFixed(2)}`;
+      document.getElementById('inv-total-bs').innerText = `${(sale.total_usd * currentRate).toFixed(2)} Bs`;
+
+      openModal('modal-invoice');
+    };
+
     window.sendWhatsAppReminderSale = function(saleId) {
       const sale = db.ventas.find(v => v.id === saleId);
       if (!sale) return;
       const client = db.clientes.find(c => c.id === sale.cliente_id);
-      if (!client || !client.telefono) { alert("El cliente no tiene teléfono registrado."); return; }
+      if (!client) return;
 
-      const debtBs = (sale.deuda_usd * currentRate).toFixed(2);
-      const text = `Hola ${client.nombre}, te saludamos de Importrebel. Te recordamos que tienes un saldo pendiente de $${parseFloat(sale.deuda_usd).toFixed(2)} USD (${debtBs} Bs a tasa oficial ${currentRate.toFixed(2)}) correspondiente a la Venta #${sale.id}. ¡Gracias por tu confianza!`;
-      const phoneClean = client.telefono.replace(/[^0-9]/g, '');
-      window.open(`https://wa.me/${phoneClean}?text=${encodeURIComponent(text)}`, '_blank');
+      const message = `Hola ${client.nombre}, te saludamos de Importrebel. Te recordamos tu saldo pendiente de $${parseFloat(sale.deuda_usd).toFixed(2)} (${(sale.deuda_usd * currentRate).toFixed(2)} Bs) de la Nota #${sale.id}. ¡Gracias por tu compra!`;
+      window.open(`https://wa.me/${client.telefono.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(message)}`, '_blank');
     };
 
     window.sendWhatsAppReminderCustomer = function(customerId) {
       const client = db.clientes.find(c => c.id === customerId);
-      if (!client || !client.telefono) { alert("El cliente no tiene teléfono registrado."); return; }
+      if (!client) return;
+      const customerSales = db.ventas.filter(v => v.cliente_id === c.id);
+      const totalDebt = customerSales.reduce((acc, v) => acc + (v.estado === 'PENDING' ? parseFloat(v.deuda_usd) : 0), 0);
 
-      const pendingSales = db.ventas.filter(v => v.cliente_id === customerId && v.estado === 'PENDING');
-      const totalDebtUSD = pendingSales.reduce((acc, v) => acc + parseFloat(v.deuda_usd), 0);
-      const totalDebtBs = (totalDebtUSD * currentRate).toFixed(2);
-
-      const text = `Hola ${client.nombre}, te saludamos de Importrebel. Te escribimos para recordarte tu saldo pendiente total por un monto de $${totalDebtUSD.toFixed(2)} USD (${totalDebtBs} Bs a la tasa del día de ${currentRate.toFixed(2)} Bs/$). ¿Podrías confirmarnos la fecha de tu próximo pago? ¡Muchas gracias!`;
-      const phoneClean = client.telefono.replace(/[^0-9]/g, '');
-      window.open(`https://wa.me/${phoneClean}?text=${encodeURIComponent(text)}`, '_blank');
-    };
-
-    // GESTIÓN DE GASTOS
-    window.openExpenseModal = function() {
-      document.getElementById('form-expense').reset();
-      openModal('modal-expense');
-    };
-
-    window.handleExpenseSubmit = async function(e) {
-      e.preventDefault();
-      const newExp = {
-        id: 'EXP-' + Date.now(),
-        concepto: document.getElementById('exp-concept').value,
-        categoria: document.getElementById('exp-category').value,
-        monto_usd: parseFloat(document.getElementById('exp-amount').value),
-        fecha: new Date().toISOString()
-      };
-
-      db.gastos.unshift(newExp);
-      await syncInsert('gastos', newExp);
-
-      closeModal('modal-expense');
-      renderAll();
-    };
-
-    window.deleteExpense = async function(id) {
-      if (confirm('¿Eliminar registro de gasto?')) {
-        db.gastos = db.gastos.filter(g => g.id !== id);
-        await syncDelete('gastos', id);
-        renderAll();
-      }
+      const message = `Hola ${client.nombre}, te saludamos de Importrebel. Te recordamos que tienes un total pendiente por pagar de $${totalDebt.toFixed(2)} (${(totalDebt * currentRate).toFixed(2)} Bs). Quedamos a tu orden.`;
+      window.open(`https://wa.me/${client.telefono.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(message)}`, '_blank');
     };
 
     window.renderExpenses = function() {
@@ -1857,27 +2235,46 @@
         return;
       }
 
-      tbody.innerHTML = db.gastos.map(g => {
-        const montoUSD = parseFloat(g.monto_usd);
-        const montoBS = montoUSD * currentRate;
-        const fechaFormatted = new Date(g.fecha).toLocaleDateString();
-
-        return `
-          <tr class="hover:bg-slate-700/30 transition">
-            <td class="px-4 py-3 font-semibold text-white">${g.concepto}</td>
-            <td class="px-4 py-3 text-xs"><span class="px-2 py-0.5 rounded bg-slate-700 text-slate-300 border border-slate-600">${g.categoria}</span></td>
-            <td class="px-4 py-3 text-xs text-slate-400 font-mono">${fechaFormatted}</td>
-            <td class="px-4 py-3">
-              <div class="font-bold text-rose-400">$${montoUSD.toFixed(2)}</div>
-              <div class="text-[11px] text-slate-400 font-mono">${montoBS.toFixed(2)} Bs</div>
-            </td>
-            <td class="px-4 py-3 text-right">
-              <button onclick="deleteExpense('${g.id}')" class="p-1.5 bg-rose-500/20 text-rose-400 hover:bg-rose-500/30 rounded transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-            </td>
-          </tr>
-        `;
-      }).join('');
+      tbody.innerHTML = db.gastos.map(g => `
+        <tr class="hover:bg-slate-700/30 transition text-xs">
+          <td class="px-4 py-3 font-bold text-white">${g.concepto}</td>
+          <td class="px-4 py-3"><span class="px-2 py-0.5 bg-slate-700 rounded text-slate-300 font-semibold">${g.categoria}</span></td>
+          <td class="px-4 py-3 text-slate-400">${g.fecha}</td>
+          <td class="px-4 py-3"><span class="font-bold text-rose-400">$${parseFloat(g.monto_usd).toFixed(2)}</span> <span class="text-slate-400">(${(g.monto_usd * currentRate).toFixed(2)} Bs)</span></td>
+          <td class="px-4 py-3 text-right"><button onclick="deleteExpense('${g.id}')" class="p-1 bg-rose-500/20 text-rose-400 hover:bg-rose-500/30 rounded transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
+        </tr>
+      `).join('');
       lucide.createIcons();
+    };
+
+    window.openExpenseModal = function() {
+      document.getElementById('form-expense').reset();
+      openModal('modal-expense');
+    };
+
+    window.handleExpenseSubmit = async function(e) {
+      e.preventDefault();
+      const newExpense = {
+        id: 'EXP-' + Date.now(),
+        concepto: document.getElementById('exp-concept').value,
+        categoria: document.getElementById('exp-category').value,
+        monto_usd: parseFloat(document.getElementById('exp-amount').value),
+        fecha: new Date().toISOString().slice(0,10)
+      };
+
+      db.gastos.push(newExpense);
+      await syncInsert('gastos', newExpense);
+
+      closeModal('modal-expense');
+      renderAll();
+    };
+
+    window.deleteExpense = async function(id) {
+      if (confirm('¿Eliminar gasto?')) {
+        db.gastos = db.gastos.filter(g => g.id !== id);
+        await syncDelete('gastos', id);
+        renderAll();
+      }
     };
   </script>
 </body>
