@@ -1558,25 +1558,32 @@
     };
 
     window.handleImageUpload = function(e) {
-      const files = Array.from(e.target.files);
-      files.forEach(file => {
-        const reader = new FileReader();
-        reader.onload = function(evt) {
-          tempUploadedImages.push(evt.target.result);
-          renderImagePreviews();
-        };
-        reader.readAsDataURL(file);
-      });
+  const files = Array.from(e.target.files);
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      tempUploadedImages.push(event.target.result);
+      renderImagePreviews();
     };
+    reader.readAsDataURL(file);
+  });
+};
 
-    function renderImagePreviews() {
-      const container = document.getElementById('prod-image-previews');
-      container.innerHTML = tempUploadedImages.map((img, idx) => `
-        <div class="relative w-16 h-16 bg-slate-900 rounded border border-slate-700 overflow-hidden">
-          <img src="${img}" class="w-full h-full object-cover" />
-          <button type="button" onclick="removeImage(${idx})" class="absolute top-0 right-0 bg-rose-600 text-white text-[10px] p-0.5 rounded-bl"><i data-lucide="x" class="w-3 h-3"></i></button>
-        </div>
-      `).join('');
+function renderImagePreviews() {
+  const container = document.getElementById('prod-image-previews');
+  if (!container) return;
+  container.innerHTML = tempUploadedImages.map((img, idx) => `
+    <div class="relative w-16 h-16 rounded-lg overflow-hidden border border-slate-700 bg-slate-900">
+      <img src="${img}" class="w-full h-full object-cover" />
+      <button type="button" onclick="removeTempImage(${idx})" class="absolute top-0 right-0 bg-rose-600 text-white text-xs px-1 rounded-bl">×</button>
+    </div>
+  `).join('');
+}
+
+function removeTempImage(idx) {
+  tempUploadedImages.splice(idx, 1);
+  renderImagePreviews();
+}
       lucide.createIcons();
     }
 
