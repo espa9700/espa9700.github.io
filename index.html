@@ -1614,10 +1614,22 @@
       renderAll();
     };
 
-    window.editProduct = function(id) {
-    // Tu lógica para abrir el modal o cargar los datos del producto
-    console.log("Editando producto:", id);
-}
+   window.editProduct = function(id) {
+    // Buscar el producto en la base de datos local
+    const p = db.productos.find(item => item.id == id);
+    if (p) {
+        // Cargar los datos en los inputs del formulario (ejemplo de campos comunes)
+        document.getElementById('prod-id').value = p.id;
+        document.getElementById('prod-name').value = p.nombre || '';
+        document.getElementById('prod-sku').value = p.sku || '';
+        document.getElementById('prod-stock').value = p.stock || '';
+        document.getElementById('prod-cost').value = p.costo || '';
+        document.getElementById('prod-price').value = p.precio || '';
+        
+        // Abrir el modal del producto
+        openModal('modal-product');
+    }
+};
 
     window.deleteProduct = async function(id) {
       if (confirm("¿Estás seguro de eliminar este producto?")) {
