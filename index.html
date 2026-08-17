@@ -1614,7 +1614,10 @@
       renderAll();
     };
 
-    window.editProduct = function(id) { openProductModal(id); };
+    window.editProduct = function(id) {
+    // Tu lógica para abrir el modal o cargar los datos del producto
+    console.log("Editando producto:", id);
+}
 
     window.deleteProduct = async function(id) {
       if (confirm("¿Estás seguro de eliminar este producto?")) {
