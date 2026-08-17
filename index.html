@@ -1279,7 +1279,7 @@
         const client = db.clientes.find(c => c.id === v.cliente_id) || { nombre: 'Cliente', apellido: 'General' };
         return {
           ID_Factura: v.id,
-          Cliente: `${client.nombre}${client.apellido}`,
+          Cliente: `${client.nombre} ${client.apellido}`,
           Total_USD: parseFloat(v.total_usd),
           Total_VES: parseFloat((v.total_usd * currentRate).toFixed(2)),
           Abonado_USD: parseFloat(v.abonado_usd),
@@ -1306,7 +1306,7 @@
       const worksheet = XLSX.utils.json_to_sheet(itemsData);
       XLSX.utils.sheet_add_aoa(worksheet, [
         [`Factura: #INV-${sale.id}`],
-        [`Cliente: ${client.nombre}${client.apellido}`],
+        [`Cliente: ${client.nombre} ${client.apellido}`],
         [`Teléfono: ${client.telefono}`],
         [`Total USD: $${parseFloat(sale.total_usd).toFixed(2)}`],
         [`Tasa BCV/Oficial: ${currentRate.toFixed(2)} Bs/$`],
@@ -1476,8 +1476,12 @@
             </td>
             <td class="px-4 py-3 font-mono text-slate-300 text-xs">${p.sku}</td>
             <td class="px-4 py-3 font-bold ${p.stock <= 3 ? 'text-rose-400' : 'text-emerald-400'}">${p.stock}</td>
-            <td class="px-4 py-3 text-slate-300">$${cost.toFixed(2)}</td>             <td class="px-4 py-3">               <span class="font-bold text-white block">$${price.toFixed(2)}</span>
-              <span class="text-[11px] text-slate-400 font-mono">${(price * currentRate).toFixed(2)} Bs</span>             </td>             <td class="px-4 py-3 text-emerald-400 font-semibold">+$${marginUSD.toFixed(2)} (${marginPct}%)</td>
+            <td class="px-4 py-3 text-slate-300">$${cost.toFixed(2)}</td>
+            <td class="px-4 py-3">
+              <span class="font-bold text-white block">$${price.toFixed(2)}</span>
+              <span class="text-[11px] text-slate-400 font-mono">${(price * currentRate).toFixed(2)} Bs</span>
+            </td>
+            <td class="px-4 py-3 text-emerald-400 font-semibold">+$${marginUSD.toFixed(2)} (${marginPct}%)</td>
             <td class="px-4 py-3 text-right">
               <button onclick="editProduct('${p.id}')" class="p-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-slate-200 transition mr-1"><i data-lucide="edit" class="w-4 h-4"></i></button>
               <button onclick="deleteProduct('${p.id}')" class="p-1.5 bg-rose-500/20 hover:bg-rose-500/30 rounded-lg text-rose-400 transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
@@ -1645,7 +1649,7 @@
       const container = document.getElementById('customers-cards-container');
       if (!container) return;
 
-      const filtered = db.clientes.filter(c => `${c.nombre} ${c.apellido}${c.telefono}`.toLowerCase().includes(query));
+      const filtered = db.clientes.filter(c => `${c.nombre} ${c.apellido} ${c.telefono}`.toLowerCase().includes(query));
       if (filtered.length === 0) {
         container.innerHTML = `<div class="col-span-full text-center py-8 text-slate-500">No hay clientes registrados.</div>`;
         return;
@@ -1660,14 +1664,19 @@
           <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 flex flex-col justify-between space-y-3 shadow-md">
             <div>
               <div class="flex justify-between items-start">
-                <h3 class="font-bold text-white text-base">${c.nombre}${c.apellido}</h3>
+                <h3 class="font-bold text-white text-base">${c.nombre} ${c.apellido}</h3>
                 <div class="flex gap-1">
                   <button onclick="editCustomer('${c.id}')" class="p-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-slate-200 transition"><i data-lucide="edit" class="w-3.5 h-3.5"></i></button>
                   <button onclick="deleteCustomer('${c.id}')" class="p-1.5 bg-rose-500/20 hover:bg-rose-500/30 rounded-lg text-rose-400 transition"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
                 </div>
               </div>
               <p class="text-xs text-slate-400 flex items-center gap-1.5 mt-1"><i data-lucide="phone" class="w-3.5 h-3.5 text-emerald-400"></i> ${c.telefono}</p>
-              <p class="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5"><i data-lucide="map-pin" class="w-3.5 h-3.5 text-slate-500"></i> ${c.direccion \vert{}\vert{} 'Sin dirección'}</p>             </div>             <div class="border-t border-slate-700 pt-3 grid grid-cols-2 gap-2 text-xs">               <div class="bg-slate-900/50 p-2 rounded-lg border border-slate-700/60">                 <span class="text-slate-400 block">Total Comprado</span>                 <span class="font-bold text-emerald-400">$${totalBought.toFixed(2)}</span>
+              <p class="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5"><i data-lucide="map-pin" class="w-3.5 h-3.5 text-slate-500"></i> ${c.direccion || 'Sin dirección'}</p>
+            </div>
+            <div class="border-t border-slate-700 pt-3 grid grid-cols-2 gap-2 text-xs">
+              <div class="bg-slate-900/50 p-2 rounded-lg border border-slate-700/60">
+                <span class="text-slate-400 block">Total Comprado</span>
+                <span class="font-bold text-emerald-400">$${totalBought.toFixed(2)}</span>
               </div>
               <div class="bg-slate-900/50 p-2 rounded-lg border border-slate-700/60">
                 <span class="text-slate-400 block">Deuda Pendiente</span>
@@ -1752,11 +1761,18 @@
         return `
           <tr class="hover:bg-slate-700/30 transition">
             <td class="px-4 py-3 font-mono text-xs text-slate-300">
-              <span class="font-bold text-white block">#INV-${v.id}</span>${new Date(parseInt(v.id)).toLocaleDateString()}
+              <span class="font-bold text-white block">#INV-${v.id}</span>
+              ${new Date(parseInt(v.id)).toLocaleDateString()}
             </td>
-            <td class="px-4 py-3 font-semibold text-white">${client.nombre}${client.apellido}</td>
-            <td class="px-4 py-3 text-xs text-slate-300">${(v.items_json \vert{}\vert{} []).reduce((acc, i) => acc + i.cantidad, 0)} items</td>             <td class="px-4 py-3">               <span class="font-bold text-white block">$${totalUSD.toFixed(2)}</span>
-              <span class="text-[11px] text-slate-400 font-mono">${(totalUSD * currentRate).toFixed(2)} Bs</span>             </td>             <td class="px-4 py-3">               <span class="text-emerald-400 block text-xs">Abonado: $${paidUSD.toFixed(2)}</span>${debtUSD > 0 ? `<span class="text-amber-400 block text-xs font-semibold">Deuda: $${debtUSD.toFixed(2)}</span>` : `<span class="text-slate-500 text-xs">Sin deuda</span>`}
+            <td class="px-4 py-3 font-semibold text-white">${client.nombre} ${client.apellido}</td>
+            <td class="px-4 py-3 text-xs text-slate-300">${(v.items_json || []).reduce((acc, i) => acc + i.cantidad, 0)} items</td>
+            <td class="px-4 py-3">
+              <span class="font-bold text-white block">$${totalUSD.toFixed(2)}</span>
+              <span class="text-[11px] text-slate-400 font-mono">${(totalUSD * currentRate).toFixed(2)} Bs</span>
+            </td>
+            <td class="px-4 py-3">
+              <span class="text-emerald-400 block text-xs">Abonado: $${paidUSD.toFixed(2)}</span>
+              ${debtUSD > 0 ? `<span class="text-amber-400 block text-xs font-semibold">Deuda: $${debtUSD.toFixed(2)}</span>` : `<span class="text-slate-500 text-xs">Sin deuda</span>`}
             </td>
             <td class="px-4 py-3">
               <span class="px-2 py-1 rounded-full text-[10px] font-bold ${isCompleted ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'}">
@@ -1839,7 +1855,8 @@
         <tr>
           <td class="py-2">${item.nombre}</td>
           <td class="py-2 text-center">${item.cantidad}</td>
-          <td class="py-2 text-right">$${parseFloat(item.precio_unitario).toFixed(2)}</td>           <td class="py-2 text-right font-bold">$${(item.precio_unitario * item.cantidad).toFixed(2)}</td>
+          <td class="py-2 text-right">$${parseFloat(item.precio_unitario).toFixed(2)}</td>
+          <td class="py-2 text-right font-bold">$${(item.precio_unitario * item.cantidad).toFixed(2)}</td>
           <td class="py-2 text-right">
             <button type="button" onclick="removeCartItem(${idx})" class="p-1 text-rose-400 hover:text-rose-300"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
           </td>
@@ -1929,7 +1946,7 @@
 
       document.getElementById('inv-number').innerText = `#INV-${sale.id}`;
       document.getElementById('inv-date').innerText = `Fecha: ${new Date(parseInt(sale.id)).toLocaleDateString()}`;
-      document.getElementById('inv-client-name').innerText = `${client.nombre}${client.apellido}`;
+      document.getElementById('inv-client-name').innerText = `${client.nombre} ${client.apellido}`;
       document.getElementById('inv-client-phone').innerText = `Teléfono: ${client.telefono}`;
       document.getElementById('inv-client-address').innerText = client.direccion || 'Dirección no especificada';
 
@@ -1938,7 +1955,8 @@
         <tr class="border-b border-slate-100">
           <td class="py-2.5 px-1">${item.nombre}</td>
           <td class="py-2.5 px-1 text-center">${item.cantidad}</td>
-          <td class="py-2.5 px-1 text-right">$${parseFloat(item.precio_unitario).toFixed(2)}</td>           <td class="py-2.5 px-1 text-right font-bold">$${(item.precio_unitario * item.cantidad).toFixed(2)}</td>
+          <td class="py-2.5 px-1 text-right">$${parseFloat(item.precio_unitario).toFixed(2)}</td>
+          <td class="py-2.5 px-1 text-right font-bold">$${(item.precio_unitario * item.cantidad).toFixed(2)}</td>
         </tr>
       `).join('');
       
@@ -1957,7 +1975,7 @@
       const sale = db.ventas.find(v => v.id === saleId);
       if (!sale) return;
       document.getElementById('pay-sale-id').value = sale.id;
-      document.getElementById('pay-sale-info').innerText = `Venta #INV-${sale.id} - Total:$${parseFloat(sale.total_usd).toFixed(2)}`;
+      document.getElementById('pay-sale-info').innerText = `Venta #INV-${sale.id} - Total: $${parseFloat(sale.total_usd).toFixed(2)}`;
       document.getElementById('pay-current-debt').innerText = `$${parseFloat(sale.deuda_usd).toFixed(2)}`;
       document.getElementById('pay-current-paid').innerText = `$${parseFloat(sale.abonado_usd).toFixed(2)}`;
       document.getElementById('pay-amount').value = '';
@@ -2007,7 +2025,7 @@
       const debtBs = (parseFloat(sale.deuda_usd) * currentRate).toFixed(2);
       const rawPhone = client.telefono.replace(/\D/g, ''); // Limpiar el número de espacios o signos
       
-      const message = `Hola ${client.nombre}, te contactamos desde Importrebel. 👋\n\nTe recordamos cordialmente que tienes un saldo pendiente de *$${debtUSD} USD* (Ref:${debtBs} Bs) correspondiente a la factura *#INV-${sale.id}*.\n\nPor favor, indícanos si tienes alguna duda con el pago. ¡Gracias por confiar en nosotros!`;
+      const message = `Hola ${client.nombre}, te contactamos desde Importrebel. 👋\n\nTe recordamos cordialmente que tienes un saldo pendiente de *$${debtUSD} USD* (Ref: ${debtBs} Bs) correspondiente a la factura *#INV-${sale.id}*.\n\nPor favor, indícanos si tienes alguna duda con el pago. ¡Gracias por confiar en nosotros!`;
       
       const whatsappUrl = `https://wa.me/${rawPhone}?text=${encodeURIComponent(message)}`;
       window.open(whatsappUrl, '_blank');
@@ -2025,7 +2043,9 @@
         <tr class="hover:bg-slate-700/30 transition">
           <td class="px-4 py-3 font-semibold text-white">${g.concepto}</td>
           <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">${g.categoria}</span></td>
-          <td class="px-4 py-3 text-xs text-slate-300">${g.fecha \vert{}\vert{} new Date(parseInt(g.id \vert{}\vert{} Date.now())).toLocaleDateString()}</td>           <td class="px-4 py-3">             <span class="font-bold text-rose-400 block">$${parseFloat(g.monto_usd).toFixed(2)}</span>
+          <td class="px-4 py-3 text-xs text-slate-300">${g.fecha || new Date(parseInt(g.id || Date.now())).toLocaleDateString()}</td>
+          <td class="px-4 py-3">
+            <span class="font-bold text-rose-400 block">$${parseFloat(g.monto_usd).toFixed(2)}</span>
             <span class="text-[11px] text-slate-400 font-mono">${(parseFloat(g.monto_usd) * currentRate).toFixed(2)} Bs</span>
           </td>
           <td class="px-4 py-3 text-right">
@@ -2088,11 +2108,175 @@
         return `
           <tr class="hover:bg-slate-700/30 transition">
             <td class="px-4 py-3">
-              <span class="font-bold text-white block">${o.producto_nombre}${o.variante ? `(${o.variante})` : ''}</span>
+              <span class="font-bold text-white block">${o.producto_nombre} ${o.variante ? `(${o.variante})` : ''}</span>
               <span class="text-xs text-slate-400">Cant: ${o.cantidad}</span>
             </td>
-            <td class="px-4 py-3 text-slate-300 font-medium">${client.nombre}${client.apellido}</td>
+            <td class="px-4 py-3 text-slate-300 font-medium">${client.nombre} ${client.apellido}</td>
             <td class="px-4 py-3">
-              <span class="text-white block text-xs font-semibold">${o.proveedor}</span>               <span class="text-emerald-400 text-xs">$${parseFloat(o.costo_fabrica).toFixed(2)}</span>
+              <span class="text-white block text-xs font-semibold">${o.proveedor}</span>
+              <span class="text-emerald-400 text-xs">$${parseFloat(o.costo_fabrica).toFixed(2)}</span>
             </td>
-            <td class="px-4 py-3 text-xs text-slate-
+            <td class="px-4 py-3 text-xs text-slate-300">
+              <span class="block font-semibold text-indigo-400">${o.ruta === 'RUTA_B' ? 'Ruta B (USA)' : 'Ruta A (Col)'}</span>
+            </td>
+            <td class="px-4 py-3 font-mono text-xs text-slate-400">
+              Origen: ${o.tracking_origen || 'N/A'}<br/>
+              Inter: ${o.tracking_inter || 'N/A'}
+            </td>
+            <td class="px-4 py-3">${statusBadge}</td>
+            <td class="px-4 py-3 text-right">
+              <div class="flex items-center justify-end gap-1">
+                <button onclick="openTrackingModal('${o.id}')" title="Tracking / Escala" class="p-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-slate-200 transition"><i data-lucide="truck" class="w-4 h-4"></i></button>
+                <button onclick="openLostModal('${o.id}')" title="Reportar Extraviado" class="p-1.5 bg-rose-500/20 hover:bg-rose-500/30 rounded-lg text-rose-400 transition"><i data-lucide="alert-triangle" class="w-4 h-4"></i></button>
+                <button onclick="deleteOrder('${o.id}')" title="Eliminar Encargo" class="p-1.5 bg-rose-500/20 hover:bg-rose-500/30 rounded-lg text-rose-400 transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+      lucide.createIcons();
+    };
+
+    window.openOrderModal = function() {
+      document.getElementById('form-order').reset();
+      document.getElementById('order-id').value = '';
+      populateDropdowns();
+      openModal('modal-order');
+    };
+
+    window.handleOrderSubmit = async function(e) {
+      e.preventDefault();
+      const fileInput = document.getElementById('order-invoice-file');
+      let invoiceUrl = '';
+      
+      if (fileInput.files.length > 0) {
+        invoiceUrl = await uploadSupabaseStorageFile(fileInput.files[0], 'documentos');
+      }
+
+      const record = {
+        id: Date.now().toString(),
+        cliente_id: document.getElementById('order-client-select').value,
+        producto_nombre: document.getElementById('order-prod-name').value,
+        variante: document.getElementById('order-prod-variant').value,
+        cantidad: parseInt(document.getElementById('order-prod-qty').value),
+        proveedor: document.getElementById('order-supplier-name').value,
+        costo_fabrica: parseFloat(document.getElementById('order-factory-cost').value),
+        fecha_compra: document.getElementById('order-purchase-date').value,
+        factura_url: invoiceUrl,
+        ruta: document.getElementById('order-route').value,
+        tracking_origen: document.getElementById('order-tracking-orig').value,
+        tracking_inter: '',
+        estado: 'TRANSIT'
+      };
+      
+      await syncInsert('encargos', record);
+      db.encargos.push(record);
+      closeModal('modal-order');
+      renderAll();
+    };
+
+    window.openTrackingModal = function(orderId) {
+        const order = db.encargos.find(o => o.id === orderId);
+        if (!order) return;
+        
+        document.getElementById('inter-order-id').value = order.id;
+        document.getElementById('inter-tracking-code').value = order.tracking_inter || '';
+        document.getElementById('inter-freight-cost').value = '0.00';
+
+        const trackingCode = order.tracking_inter || order.tracking_origen || '';
+        document.getElementById('btn-parcels-link').href = `https://parcelsapp.com/es/tracking/${trackingCode}`;
+
+        document.getElementById('tracking-iframe-label').innerText = order.tracking_inter ? `Guía: ${order.tracking_inter}` : 'Sin guía intermedia';
+
+        openModal('modal-tracking');
+    };
+
+    window.handleInterScaleSubmit = async function(e) {
+      e.preventDefault();
+      const orderId = document.getElementById('inter-order-id').value;
+      const trackingInter = document.getElementById('inter-tracking-code').value;
+      const freightCost = parseFloat(document.getElementById('inter-freight-cost').value) || 0;
+
+      const order = db.encargos.find(o => o.id === orderId);
+      if (!order) return;
+
+      order.tracking_inter = trackingInter;
+      await syncUpdate('encargos', order.id, { tracking_inter: trackingInter });
+
+      if (freightCost > 0) {
+        const expenseRecord = {
+          id: Date.now().toString(),
+          concepto: `Flete/Aduana adicional encargo ${order.producto_nombre}`,
+          categoria: 'Flete/Logística',
+          monto_usd: freightCost,
+          fecha: new Date().toISOString().slice(0,10)
+        };
+        await syncInsert('gastos', expenseRecord);
+        db.gastos.push(expenseRecord);
+      }
+
+      alert("Escala actualizada y costos registrados correctamente.");
+      closeModal('modal-tracking');
+      renderAll();
+    };
+
+    window.openLostModal = function(orderId) {
+      document.getElementById('form-lost').reset();
+      document.getElementById('lost-order-id').value = orderId;
+      openModal('modal-lost');
+    };
+
+    window.handleLostSubmit = async function(e) {
+      e.preventDefault();
+      const orderId = document.getElementById('lost-order-id').value;
+      const reason = document.getElementById('lost-reason').value;
+      const order = db.encargos.find(o => o.id === orderId);
+      if (!order) return;
+
+      order.estado = 'LOST';
+      await syncUpdate('encargos', order.id, { estado: 'LOST' });
+
+      // Registrar pérdida como gasto
+      const lossExpense = {
+        id: Date.now().toString(),
+        concepto: `Pérdida/Extravío encargo: ${order.producto_nombre} (${reason})`,
+        categoria: 'Pérdida/Extravío',
+        monto_usd: parseFloat(order.costo_fabrica) * parseInt(order.cantidad),
+        fecha: new Date().toISOString().slice(0,10)
+      };
+      
+      await syncInsert('gastos', lossExpense);
+      db.gastos.push(lossExpense);
+
+      closeModal('modal-lost');
+      renderAll();
+      alert("Encargo marcado como extraviado y pérdida registrada en gastos.");
+    };
+
+    window.deleteOrder = async function(id) {
+      if (confirm("¿Estás seguro de eliminar este encargo?")) {
+        await syncDelete('encargos', id);
+        db.encargos = db.encargos.filter(o => o.id !== id);
+        renderAll();
+      }
+    };
+
+    function populateDropdowns() {
+      const clientSelects = [document.getElementById('order-client-select'), document.getElementById('sale-client-select')];
+      clientSelects.forEach(sel => {
+        if (!sel) return;
+        sel.innerHTML = db.clientes.length > 0 
+          ? db.clientes.map(c => `<option value="${c.id}">${c.nombre} ${c.apellido} (${c.telefono})</option>`).join('')
+          : '<option value="">-- No hay clientes registrados --</option>';
+      });
+      
+      const prodSelect = document.getElementById('sale-product-select');
+      if (prodSelect) {
+        prodSelect.innerHTML = db.productos.length > 0
+          ? db.productos.map(p => `<option value="${p.id}">${p.nombre} - Stock: ${p.stock} - $${p.precio_venta}</option>`).join('')
+          : '<option value="">-- No hay productos en stock --</option>';
+      }
+    }
+  </script>
+</body>
+</html>
