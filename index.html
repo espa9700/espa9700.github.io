@@ -317,37 +317,205 @@
         </div>
       </section>
 
-      <section id="tab-orders" class="tab-content space-y-6 hidden">
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h2 class="text-2xl font-bold text-white">Gestión de Encargos y Triangulación</h2>
-            <p class="text-xs text-slate-400">Rastreo de envíos intermedios, costos logísticos e importación en tránsito</p>
-          </div>
-          <button onclick="openOrderModal()" class="bg-emerald-500 hover:bg-emerald-600 text-slate-900 font-bold px-4 py-2 rounded-xl flex items-center gap-2 transition shadow-lg shadow-emerald-500/20">
-            <i data-lucide="plus-circle" class="w-5 h-5"></i>
-            <span>Nuevo Encargo</span>
-          </button>
-        </div>
+      // Renderizar Tabla de Encargos con Semáforos y Landed Cost
+window.renderOrders = function() {
+  const tbody = document.getElementById('orders-table-body');
+  if (!tbody) return;
 
-        <div class="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm">
-              <thead class="bg-slate-900/60 text-slate-400 text-xs uppercase font-semibold border-b border-slate-700">
-                <tr>
-                  <th class="px-4 py-3">Encargo / Producto</th>
-                  <th class="px-4 py-3">Cliente</th>
-                  <th class="px-4 py-3">Proveedor / Costo</th>
-                  <th class="px-4 py-3">Ruta / Escala</th>
-                  <th class="px-4 py-3">Tracking</th>
-                  <th class="px-4 py-3">Estado</th>
-                  <th class="px-4 py-3 text-right">Acciones</th>
-                </tr>
-              </thead>
-              <tbody id="orders-table-body" class="divide-y divide-slate-700/60"></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
+  if (!db.encargos || db.encargos.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-500 text-sm">No hay encargos de importación registrados.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = db.encargos.map(o => {
+    const client = db.clientes.find(c => c.id === o.cliente_id) || { nombre: 'Cliente General', apellido: '' };
+    
+    // Cálculo de Días en Tránsito y Semáforo
+    const fechaCompra = new Date(o.fecha_compra || Date.now());
+    const fechaLlegadaBodegaCO = o.fecha_llegada_co ? new Date(o.fecha_llegada_co) : new Date();
+    const diffTime = Math.abs(fechaLlegadaBodegaCO - fechaCompra);
+    const diasTransito = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    let semaforoHTML = '';
+    let badgeColor = '';
+    if (!o.fecha_llegada_co && o.estado !== 'Entregado' && o.estado !== 'Recibido en VE') {
+      if (diasTransito < 12) {
+        badgeColor = 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
+        semaforoHTML = `<span class="px-2 py-0.5 rounded text-xs font-bold border ${badgeColor}">🟢 Verde (${diasTransito}d)</span>`;
+      } else if (diasTransito >= 13 && diasTransito <= 20) {
+        badgeColor = 'bg-amber-500/20 text-amber-400 border-amber-500/30';
+        semaforoHTML = `<span class="px-2 py-0.5 rounded text-xs font-bold border ${badgeColor}">🟡 Amarillo (${diasTransito}d)</span>`;
+      } else {
+        badgeColor = 'bg-rose-500/20 text-rose-400 border-rose-500/30';
+        semaforoHTML = `<span class="px-2 py-0.5 rounded text-xs font-bold border ${badgeColor}">🔴 Rojo (${diasTransito}d - Retrasado)</span>`;
+      }
+    } else {
+      semaforoHTML = `<span class="text-xs text-slate-400">Completado (${diasTransito}d)</span>`;
+    }
+
+    // Landed Cost = Precio Producto + Costo Envío
+    const precioProd = parseFloat(o.precio_producto || 0);
+    const costoEnvio = parseFloat(o.costo_envio || 0);
+    const landedCost = precioProd + costoEnvio;
+
+    // Enlace directo 1-Click a 17track
+    const trackingChinaUrl = `https://www.17track.net/es/track#nums=${o.tracking_china || ''}`;
+
+    // Declaración Link
+    const docLinkHTML = o.documento_url 
+      ? `<a href="${o.documento_url}" target="_blank" class="text-emerald-400 underline text-xs font-semibold hover:text-emerald-300">Ver Declaración</a>`
+      : `<span class="text-slate-500 text-xs">Sin archivo</span>`;
+
+    return `
+      <tr class="hover:bg-slate-700/35 transition">
+        <td class="px-4 py-3">
+          <span class="font-bold text-white block">${o.producto_nombre}</span>
+          <span class="text-xs text-slate-400">${client.nombre} ${client.apellido}</span>
+        </td>
+        <td class="px-4 py-3">
+          <a href="${trackingChinaUrl}" target="_blank" class="text-blue-400 hover:underline text-xs flex items-center gap-1">
+            <i data-lucide="external-link" class="w-3.5 h-3.5"></i> ${o.tracking_china}
+          </a>
+          <span class="text-[11px] text-slate-500 block">Compra: ${o.fecha_compra || 'N/A'}</span>
+        </td>
+        <td class="px-4 py-3">
+          <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-700 text-slate-200 border border-slate-600">${o.estado || 'Comprado en China'}</span>
+          ${o.caja_id ? `<span class="block text-[10px] text-amber-400 mt-0.5">Caja: ${o.caja_id}</span>` : ''}
+        </td>
+        <td class="px-4 py-3">${semaforoHTML}</td>
+        <td class="px-4 py-3 font-bold text-emerald-400">$${landedCost.toFixed(2)}</td>
+        <td class="px-4 py-3">${docLinkHTML}</td>
+        <td class="px-4 py-3 text-right space-x-1">
+          <button onclick="editOrder('${o.id}')" class="p-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg transition" title="Editar / Actualizar Estado">
+            <i data-lucide="edit" class="w-4 h-4"></i>
+          </button>
+          <button onclick="deleteOrder('${o.id}')" class="p-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 rounded-lg transition" title="Eliminar Encargo">
+            <i data-lucide="trash-2" class="w-4 h-4"></i>
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+  
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+};
+
+// Abrir Modal de Encargo (Crear o Editar)
+window.openOrderModal = function(orderId = null) {
+  const form = document.getElementById('form-order');
+  if (form) form.reset();
+  document.getElementById('order-id').value = '';
+  document.getElementById('modal-order-title').innerText = 'Nuevo Encargo de Importación (China)';
+
+  // Poblar select de clientes
+  const select = document.getElementById('order-client-select');
+  if (select) {
+    select.innerHTML = db.clientes && db.clientes.length > 0 
+      ? db.clientes.map(c => `<option value="${c.id}">${c.nombre} ${c.apellido} (${c.telefono || 'Sin teléfono'})</option>`).join('')
+      : '<option value="">-- No hay clientes registrados --</option>';
+  }
+
+  if (orderId) {
+    const o = db.encargos.find(item => item.id === orderId);
+    if (o) {
+      document.getElementById('modal-order-title').innerText = 'Actualizar Estado / Logística Encargo';
+      document.getElementById('order-id').value = o.id;
+      document.getElementById('order-client-select').value = o.cliente_id || '';
+      document.getElementById('order-prod-name').value = o.producto_nombre || '';
+      document.getElementById('order-price').value = o.precio_producto || '';
+      document.getElementById('order-tracking-china').value = o.tracking_china || '';
+      document.getElementById('order-date-purchase').value = o.fecha_compra || '';
+      document.getElementById('order-status-dropdown').value = o.estado || 'Comprado en China';
+      document.getElementById('order-box-id').value = o.caja_id || '';
+      document.getElementById('order-date-co').value = o.fecha_llegada_co || '';
+      document.getElementById('order-date-ve').value = o.fecha_llegada_ve || '';
+      document.getElementById('order-shipping-cost').value = o.costo_envio || '';
+      document.getElementById('order-tracking-local').value = o.tracking_local || '';
+      document.getElementById('order-dimensions').value = o.dimensiones || '';
+      document.getElementById('order-weight').value = o.peso || '';
+    }
+  } else {
+    // Fecha por defecto hoy para nuevas compras
+    document.getElementById('order-date-purchase').value = new Date().toISOString().slice(0, 10);
+  }
+
+  const modal = document.getElementById('modal-order');
+  if (modal) modal.classList.remove('hidden');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+};
+
+window.editOrder = function(id) {
+  openOrderModal(id);
+};
+
+// Manejo del Submit y Supabase Storage (Subida de Declaración)
+window.handleOrderSubmit = async function(e) {
+  e.preventDefault();
+  const id = document.getElementById('order-id').value;
+  
+  let documentoUrl = null;
+  const fileInput = document.getElementById('order-document-file');
+  
+  if (fileInput && fileInput.files && fileInput.files[0]) {
+    const file = fileInput.files[0];
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}_declaration.${fileExt}`;
+    const filePath = `declaraciones/${fileName}`;
+
+    if (typeof supabaseClient !== 'undefined' && supabaseClient.storage) {
+      const { data, error } = await supabaseClient.storage.from('documentos').upload(filePath, file);
+      if (!error) {
+        const { data: publicUrlData } = supabaseClient.storage.from('documentos').getPublicUrl(filePath);
+        documentoUrl = publicUrlData.publicUrl;
+      } else {
+        console.error("Error subiendo archivo a Supabase Storage:", error.message);
+      }
+    }
+  }
+
+  const record = {
+    cliente_id: document.getElementById('order-client-select').value,
+    producto_nombre: document.getElementById('order-prod-name').value,
+    precio_producto: parseFloat(document.getElementById('order-price').value) || 0,
+    tracking_china: document.getElementById('order-tracking-china').value,
+    fecha_compra: document.getElementById('order-date-purchase').value,
+    estado: document.getElementById('order-status-dropdown').value,
+    caja_id: document.getElementById('order-box-id').value || null,
+    fecha_llegada_co: document.getElementById('order-date-co').value || null,
+    fecha_llegada_ve: document.getElementById('order-date-ve').value || null,
+    costo_envio: parseFloat(document.getElementById('order-shipping-cost').value) || 0,
+    tracking_local: document.getElementById('order-tracking-local').value || null,
+    dimensiones: document.getElementById('order-dimensions').value || null,
+    peso: document.getElementById('order-weight').value || null,
+  };
+
+  if (documentoUrl) {
+    record.documento_url = documentoUrl;
+  }
+
+  if (id) {
+    await syncUpdate('encargos', id, record);
+    const idx = db.encargos.findIndex(o => o.id === id);
+    if (idx !== -1) {
+      db.encargos[idx] = { ...db.encargos[idx], ...record };
+    }
+  } else {
+    const newRecord = { id: Date.now().toString(), ...record };
+    await syncInsert('encargos', newRecord);
+    db.encargos.push(newRecord);
+  }
+
+  closeModal('modal-order');
+  renderOrders();
+};
+
+window.deleteOrder = async function(id) {
+  if (confirm("¿Estás seguro de eliminar este encargo de importación?")) {
+    await syncDelete('encargos', id);
+    db.encargos = db.encargos.filter(o => o.id !== id);
+    renderOrders();
+  }
+};
 
       <section id="tab-sales" class="tab-content space-y-6 hidden">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
