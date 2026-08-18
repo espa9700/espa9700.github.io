@@ -317,205 +317,144 @@
         </div>
       </section>
 
-      // Renderizar Tabla de Encargos con Semáforos y Landed Cost
-window.renderOrders = function() {
-  const tbody = document.getElementById('orders-table-body');
-  if (!tbody) return;
+      <section id="tab-orders" class="tab-content space-y-6 hidden">
+  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div>
+      <h2 class="text-2xl font-bold text-white">Gestión de Encargos y Triangulación (China ➔ CO ➔ VE)</h2>
+      <p class="text-xs text-slate-400">Rastreo logístico, consolidación, costos totales (Landed Cost) y semáforo de tránsito</p>
+    </div>
+    <button onclick="openOrderModal()" class="bg-emerald-500 hover:bg-emerald-600 text-slate-900 font-bold px-4 py-2 rounded-xl flex items-center gap-2 transition shadow-lg shadow-emerald-500/20">
+      <i data-lucide="plus-circle" class="w-5 h-5"></i>
+      <span>Nuevo Encargo (China)</span>
+    </button>
+  </div>
 
-  if (!db.encargos || db.encargos.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-500 text-sm">No hay encargos de importación registrados.</td></tr>`;
-    return;
-  }
+  <div class="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-sm">
+        <thead class="bg-slate-900/60 text-slate-400 text-xs uppercase font-semibold border-b border-slate-700">
+          <tr>
+            <th class="px-4 py-3">Producto / Cliente</th>
+            <th class="px-4 py-3">Tracking & Enlace China</th>
+            <th class="px-4 py-3">Estado Logístico</th>
+            <th class="px-4 py-3">Semáforo Días</th>
+            <th class="px-4 py-3">Landed Cost ($)</th>
+            <th class="px-4 py-3">Declaración</th>
+            <th class="px-4 py-3 text-right">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="orders-table-body" class="divide-y divide-slate-700/60"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
 
-  tbody.innerHTML = db.encargos.map(o => {
-    const client = db.clientes.find(c => c.id === o.cliente_id) || { nombre: 'Cliente General', apellido: '' };
-    
-    // Cálculo de Días en Tránsito y Semáforo
-    const fechaCompra = new Date(o.fecha_compra || Date.now());
-    const fechaLlegadaBodegaCO = o.fecha_llegada_co ? new Date(o.fecha_llegada_co) : new Date();
-    const diffTime = Math.abs(fechaLlegadaBodegaCO - fechaCompra);
-    const diasTransito = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+<div id="modal-order" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop hidden overflow-y-auto">
+  <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-3xl p-6 shadow-2xl relative my-8 max-h-[90vh] overflow-y-auto">
+    <button onclick="closeModal('modal-order')" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+    <h3 class="text-xl font-bold text-white mb-4" id="modal-order-title">Nuevo Encargo de Importación</h3>
+    <form id="form-order" onsubmit="handleOrderSubmit(event)" class="space-y-4">
+      <input type="hidden" id="order-id" />
+      
+      <div class="p-4 bg-slate-900/60 rounded-xl border border-slate-700 space-y-3">
+        <h4 class="text-xs font-bold uppercase text-emerald-400 tracking-wider flex items-center gap-1"><i data-lucide="shopping-cart" class="w-4 h-4"></i> 1. Compra Inicial (China)</h4>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Cliente Vinculado *</label>
+            <select id="order-client-select" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500"></select>
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Nombre / Descripción Producto *</label>
+            <input type="text" id="order-prod-name" required placeholder="Ej. Smartwatch T500" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500" />
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Precio Producto ($ USD) *</label>
+            <input type="number" step="0.01" id="order-price" required placeholder="0.00" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Tracking China *</label>
+            <input type="text" id="order-tracking-china" required placeholder="Número de guía 17track" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Fecha de Compra *</label>
+            <input type="date" id="order-date-purchase" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500" />
+          </div>
+        </div>
+      </div>
 
-    let semaforoHTML = '';
-    let badgeColor = '';
-    if (!o.fecha_llegada_co && o.estado !== 'Entregado' && o.estado !== 'Recibido en VE') {
-      if (diasTransito < 12) {
-        badgeColor = 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
-        semaforoHTML = `<span class="px-2 py-0.5 rounded text-xs font-bold border ${badgeColor}">🟢 Verde (${diasTransito}d)</span>`;
-      } else if (diasTransito >= 13 && diasTransito <= 20) {
-        badgeColor = 'bg-amber-500/20 text-amber-400 border-amber-500/30';
-        semaforoHTML = `<span class="px-2 py-0.5 rounded text-xs font-bold border ${badgeColor}">🟡 Amarillo (${diasTransito}d)</span>`;
-      } else {
-        badgeColor = 'bg-rose-500/20 text-rose-400 border-rose-500/30';
-        semaforoHTML = `<span class="px-2 py-0.5 rounded text-xs font-bold border ${badgeColor}">🔴 Rojo (${diasTransito}d - Retrasado)</span>`;
-      }
-    } else {
-      semaforoHTML = `<span class="text-xs text-slate-400">Completado (${diasTransito}d)</span>`;
-    }
+      <div class="p-4 bg-slate-900/60 rounded-xl border border-slate-700 space-y-3">
+        <h4 class="text-xs font-bold uppercase text-amber-400 tracking-wider flex items-center gap-1"><i data-lucide="truck" class="w-4 h-4"></i> 2. Logística CO ➔ VE (Edición Progresiva)</h4>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Estado Actual del Paquete</label>
+            <select id="order-status-dropdown" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500">
+              <option value="Comprado en China">Comprado en China</option>
+              <option value="En tránsito a CO">En tránsito a CO</option>
+              <option value="En Bodega CO">En Bodega CO</option>
+              <option value="Consolidado en Caja">Consolidado en Caja</option>
+              <option value="En tránsito a VE">En tránsito a VE</option>
+              <option value="Recibido en VE">Recibido en VE</option>
+              <option value="Entregado">Entregado</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">ID / Código Caja Consolidada</label>
+            <input type="text" id="order-box-id" placeholder="Ej. CAJA-VE-001" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500" />
+          </div>
+        </div>
 
-    // Landed Cost = Precio Producto + Costo Envío
-    const precioProd = parseFloat(o.precio_producto || 0);
-    const costoEnvio = parseFloat(o.costo_envio || 0);
-    const landedCost = precioProd + costoEnvio;
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Llegada a Bodega (CO)</label>
+            <input type="date" id="order-date-co" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Salida CO</label>
+            <input type="date" id="order-date-leave-co" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Llegada a Destino (VE)</label>
+            <input type="date" id="order-date-ve" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500" />
+          </div>
+        </div>
 
-    // Enlace directo 1-Click a 17track
-    const trackingChinaUrl = `https://www.17track.net/es/track#nums=${o.tracking_china || ''}`;
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+          <div class="sm:col-span-2">
+            <label class="block text-xs text-slate-400 mb-1">Tracking Local (Transportadora)</label>
+            <input type="text" id="order-tracking-local" placeholder="Guía local" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Dimensiones (cm)</label>
+            <input type="text" id="order-dimensions" placeholder="Ej. 20x15x10" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Peso (kg/lb)</label>
+            <input type="text" id="order-weight" placeholder="Ej. 1.5 kg" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500" />
+          </div>
+        </div>
+        
+        <div>
+           <label class="block text-xs text-slate-400 mb-1">Costo Envío Asignado / Prorrateado ($ USD)</label>
+           <input type="number" step="0.01" id="order-shipping-cost" placeholder="0.00" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 font-bold text-emerald-400" />
+        </div>
+      </div>
 
-    // Declaración Link
-    const docLinkHTML = o.documento_url 
-      ? `<a href="${o.documento_url}" target="_blank" class="text-emerald-400 underline text-xs font-semibold hover:text-emerald-300">Ver Declaración</a>`
-      : `<span class="text-slate-500 text-xs">Sin archivo</span>`;
+      <div class="p-4 bg-slate-900/60 rounded-xl border border-slate-700">
+        <label class="block text-xs text-slate-400 mb-1">Declaración / Factura (.jpg, .png, .pdf)</label>
+        <input type="file" id="order-document-file" accept=".jpg,.jpeg,.png,.pdf" class="w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-emerald-500/20 file:text-emerald-400 hover:file:bg-emerald-500/30 cursor-pointer transition" />
+      </div>
 
-    return `
-      <tr class="hover:bg-slate-700/35 transition">
-        <td class="px-4 py-3">
-          <span class="font-bold text-white block">${o.producto_nombre}</span>
-          <span class="text-xs text-slate-400">${client.nombre} ${client.apellido}</span>
-        </td>
-        <td class="px-4 py-3">
-          <a href="${trackingChinaUrl}" target="_blank" class="text-blue-400 hover:underline text-xs flex items-center gap-1">
-            <i data-lucide="external-link" class="w-3.5 h-3.5"></i> ${o.tracking_china}
-          </a>
-          <span class="text-[11px] text-slate-500 block">Compra: ${o.fecha_compra || 'N/A'}</span>
-        </td>
-        <td class="px-4 py-3">
-          <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-700 text-slate-200 border border-slate-600">${o.estado || 'Comprado en China'}</span>
-          ${o.caja_id ? `<span class="block text-[10px] text-amber-400 mt-0.5">Caja: ${o.caja_id}</span>` : ''}
-        </td>
-        <td class="px-4 py-3">${semaforoHTML}</td>
-        <td class="px-4 py-3 font-bold text-emerald-400">$${landedCost.toFixed(2)}</td>
-        <td class="px-4 py-3">${docLinkHTML}</td>
-        <td class="px-4 py-3 text-right space-x-1">
-          <button onclick="editOrder('${o.id}')" class="p-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg transition" title="Editar / Actualizar Estado">
-            <i data-lucide="edit" class="w-4 h-4"></i>
-          </button>
-          <button onclick="deleteOrder('${o.id}')" class="p-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 rounded-lg transition" title="Eliminar Encargo">
-            <i data-lucide="trash-2" class="w-4 h-4"></i>
-          </button>
-        </td>
-      </tr>
-    `;
-  }).join('');
-  
-  if (typeof lucide !== 'undefined') lucide.createIcons();
-};
-
-// Abrir Modal de Encargo (Crear o Editar)
-window.openOrderModal = function(orderId = null) {
-  const form = document.getElementById('form-order');
-  if (form) form.reset();
-  document.getElementById('order-id').value = '';
-  document.getElementById('modal-order-title').innerText = 'Nuevo Encargo de Importación (China)';
-
-  // Poblar select de clientes
-  const select = document.getElementById('order-client-select');
-  if (select) {
-    select.innerHTML = db.clientes && db.clientes.length > 0 
-      ? db.clientes.map(c => `<option value="${c.id}">${c.nombre} ${c.apellido} (${c.telefono || 'Sin teléfono'})</option>`).join('')
-      : '<option value="">-- No hay clientes registrados --</option>';
-  }
-
-  if (orderId) {
-    const o = db.encargos.find(item => item.id === orderId);
-    if (o) {
-      document.getElementById('modal-order-title').innerText = 'Actualizar Estado / Logística Encargo';
-      document.getElementById('order-id').value = o.id;
-      document.getElementById('order-client-select').value = o.cliente_id || '';
-      document.getElementById('order-prod-name').value = o.producto_nombre || '';
-      document.getElementById('order-price').value = o.precio_producto || '';
-      document.getElementById('order-tracking-china').value = o.tracking_china || '';
-      document.getElementById('order-date-purchase').value = o.fecha_compra || '';
-      document.getElementById('order-status-dropdown').value = o.estado || 'Comprado en China';
-      document.getElementById('order-box-id').value = o.caja_id || '';
-      document.getElementById('order-date-co').value = o.fecha_llegada_co || '';
-      document.getElementById('order-date-ve').value = o.fecha_llegada_ve || '';
-      document.getElementById('order-shipping-cost').value = o.costo_envio || '';
-      document.getElementById('order-tracking-local').value = o.tracking_local || '';
-      document.getElementById('order-dimensions').value = o.dimensiones || '';
-      document.getElementById('order-weight').value = o.peso || '';
-    }
-  } else {
-    // Fecha por defecto hoy para nuevas compras
-    document.getElementById('order-date-purchase').value = new Date().toISOString().slice(0, 10);
-  }
-
-  const modal = document.getElementById('modal-order');
-  if (modal) modal.classList.remove('hidden');
-  if (typeof lucide !== 'undefined') lucide.createIcons();
-};
-
-window.editOrder = function(id) {
-  openOrderModal(id);
-};
-
-// Manejo del Submit y Supabase Storage (Subida de Declaración)
-window.handleOrderSubmit = async function(e) {
-  e.preventDefault();
-  const id = document.getElementById('order-id').value;
-  
-  let documentoUrl = null;
-  const fileInput = document.getElementById('order-document-file');
-  
-  if (fileInput && fileInput.files && fileInput.files[0]) {
-    const file = fileInput.files[0];
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}_declaration.${fileExt}`;
-    const filePath = `declaraciones/${fileName}`;
-
-    if (typeof supabaseClient !== 'undefined' && supabaseClient.storage) {
-      const { data, error } = await supabaseClient.storage.from('documentos').upload(filePath, file);
-      if (!error) {
-        const { data: publicUrlData } = supabaseClient.storage.from('documentos').getPublicUrl(filePath);
-        documentoUrl = publicUrlData.publicUrl;
-      } else {
-        console.error("Error subiendo archivo a Supabase Storage:", error.message);
-      }
-    }
-  }
-
-  const record = {
-    cliente_id: document.getElementById('order-client-select').value,
-    producto_nombre: document.getElementById('order-prod-name').value,
-    precio_producto: parseFloat(document.getElementById('order-price').value) || 0,
-    tracking_china: document.getElementById('order-tracking-china').value,
-    fecha_compra: document.getElementById('order-date-purchase').value,
-    estado: document.getElementById('order-status-dropdown').value,
-    caja_id: document.getElementById('order-box-id').value || null,
-    fecha_llegada_co: document.getElementById('order-date-co').value || null,
-    fecha_llegada_ve: document.getElementById('order-date-ve').value || null,
-    costo_envio: parseFloat(document.getElementById('order-shipping-cost').value) || 0,
-    tracking_local: document.getElementById('order-tracking-local').value || null,
-    dimensiones: document.getElementById('order-dimensions').value || null,
-    peso: document.getElementById('order-weight').value || null,
-  };
-
-  if (documentoUrl) {
-    record.documento_url = documentoUrl;
-  }
-
-  if (id) {
-    await syncUpdate('encargos', id, record);
-    const idx = db.encargos.findIndex(o => o.id === id);
-    if (idx !== -1) {
-      db.encargos[idx] = { ...db.encargos[idx], ...record };
-    }
-  } else {
-    const newRecord = { id: Date.now().toString(), ...record };
-    await syncInsert('encargos', newRecord);
-    db.encargos.push(newRecord);
-  }
-
-  closeModal('modal-order');
-  renderOrders();
-};
-
-window.deleteOrder = async function(id) {
-  if (confirm("¿Estás seguro de eliminar este encargo de importación?")) {
-    await syncDelete('encargos', id);
-    db.encargos = db.encargos.filter(o => o.id !== id);
-    renderOrders();
-  }
-};
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" onclick="closeModal('modal-order')" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-5 py-2.5 rounded-xl text-sm font-semibold transition">Cancelar</button>
+        <button type="submit" class="bg-emerald-500 hover:bg-emerald-600 text-slate-900 font-bold px-6 py-2.5 rounded-xl text-sm transition">Guardar Encargo</button>
+      </div>
+    </form>
+  </div>
+</div>
+      </section>
 
       <section id="tab-sales" class="tab-content space-y-6 hidden">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -2253,181 +2192,210 @@ window.deleteOrder = async function(id) {
       }
     };
 
-    window.renderOrders = function() {
-      const tbody = document.getElementById('orders-table-body');
-      if (!tbody) return;
-      
-      if (!db.encargos || db.encargos.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-slate-500">No hay encargos de importación registrados.</td></tr>`;
-        return;
+    // ==========================================
+// MÓDULO DE ENCARGOS (CHINA -> CO -> VE)
+// ==========================================
+
+window.renderOrders = function() {
+  const tbody = document.getElementById('orders-table-body');
+  if (!tbody) return;
+
+  if (!db.encargos || db.encargos.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-500 text-sm">No hay encargos de importación registrados.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = db.encargos.map(o => {
+    const client = db.clientes.find(c => c.id === o.cliente_id) || { nombre: 'Cliente General', apellido: '' };
+    
+    // 1. Cálculos de Tránsito y Semáforo
+    const fechaCompra = new Date(o.fecha_compra || Date.now());
+    const fechaFinTransito = o.fecha_llegada_co ? new Date(o.fecha_llegada_co) : new Date();
+    // Diferencia en días
+    const diasTransito = Math.floor((fechaFinTransito - fechaCompra) / (1000 * 60 * 60 * 24));
+
+    let semaforoHTML = '';
+    const estadosCompletados = ['Recibido en VE', 'Entregado'];
+    
+    if (!o.fecha_llegada_co && !estadosCompletados.includes(o.estado)) {
+      if (diasTransito < 12) {
+        semaforoHTML = `<span class="px-2 py-1 rounded text-xs font-bold border bg-emerald-500/20 text-emerald-400 border-emerald-500/30">🟢 ${diasTransito}d</span>`;
+      } else if (diasTransito >= 13 && diasTransito <= 20) {
+        semaforoHTML = `<span class="px-2 py-1 rounded text-xs font-bold border bg-amber-500/20 text-amber-400 border-amber-500/30">🟡 ${diasTransito}d</span>`;
+      } else {
+        semaforoHTML = `<span class="px-2 py-1 rounded text-xs font-bold border bg-rose-500/20 text-rose-400 border-rose-500/30">🔴 ${diasTransito}d (Retraso)</span>`;
       }
+    } else {
+      semaforoHTML = `<span class="text-xs text-slate-400 font-medium">Llegó en ${diasTransito}d</span>`;
+    }
 
-      tbody.innerHTML = db.encargos.map(o => {
-        const client = db.clientes.find(c => c.id === o.cliente_id) || { nombre: 'Cliente General', apellido: '' };
-        let statusBadge = '';
-        if (o.estado === 'LOST') {
-          statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30">EXTRAVIADO</span>`;
-        } else if (o.estado === 'ARRIVED') {
-          statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">DISPONIBLE / ENTREGADO</span>`;
-        } else {
-          statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-400 whitespace-nowrap">EN TRÁNSITO</span>`;
-        }
+    // 2. Landed Cost
+    const precioProd = parseFloat(o.precio_producto || 0);
+    const costoEnvio = parseFloat(o.costo_envio || 0);
+    const landedCost = precioProd + costoEnvio;
 
-        return `
-          <tr class="hover:bg-slate-700/30 transition">
-            <td class="px-4 py-3">
-              <span class="font-bold text-white block">${o.producto_nombre} ${o.variante ? `(${o.variante})` : ''}</span>
-              <span class="text-xs text-slate-400">Cant: ${o.cantidad}</span>
-            </td>
-            <td class="px-4 py-3 text-slate-300 font-medium">${client.nombre} ${client.apellido}</td>
-            <td class="px-4 py-3">
-              <span class="text-white block text-xs font-semibold">${o.proveedor}</span>
-              <span class="text-emerald-400 text-xs">$${parseFloat(o.costo_fabrica).toFixed(2)}</span>
-            </td>
-            <td class="px-4 py-3 text-xs text-slate-300">
-              <span class="block font-semibold text-indigo-400">${o.ruta === 'RUTA_B' ? 'Ruta B (USA)' : 'Ruta A (Col)'}</span>
-            </td>
-            <td class="px-4 py-3 font-mono text-xs text-slate-400">
-              Origen: ${o.tracking_origen || 'N/A'}<br/>
-              Inter: ${o.tracking_inter || 'N/A'}
-            </td>
-            <td class="px-4 py-3">${statusBadge}</td>
-            <td class="px-4 py-3 text-right">
-              <div class="flex items-center justify-end gap-1">
-                <button onclick="openTrackingModal('${o.id}')" title="Tracking / Escala" class="p-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-slate-200 transition"><i data-lucide="truck" class="w-4 h-4"></i></button>
-                <button onclick="openLostModal('${o.id}')" title="Reportar Extraviado" class="p-1.5 bg-rose-500/20 hover:bg-rose-500/30 rounded-lg text-rose-400 transition"><i data-lucide="alert-triangle" class="w-4 h-4"></i></button>
-                <button onclick="deleteOrder('${o.id}')" title="Eliminar Encargo" class="p-1.5 bg-rose-500/20 hover:bg-rose-500/30 rounded-lg text-rose-400 transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-              </div>
-            </td>
-          </tr>
-        `;
-      }).join('');
-      lucide.createIcons();
-    };
+    // 3. Enlaces Dinámicos
+    const trackingChinaUrl = `https://www.17track.net/es/track#nums=${o.tracking_china || ''}`;
+    const docLinkHTML = o.documento_url 
+      ? `<a href="${o.documento_url}" target="_blank" class="px-2 py-1 bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/40 rounded border border-indigo-500/30 text-[10px] font-bold uppercase transition flex items-center justify-center gap-1 w-max"><i data-lucide="file-check" class="w-3 h-3"></i> Ver Doc</a>`
+      : `<span class="text-slate-600 text-[10px] uppercase font-bold">Sin Archivo</span>`;
 
-    window.openOrderModal = function() {
-      document.getElementById('form-order').reset();
-      document.getElementById('order-id').value = '';
-      populateDropdowns();
-      openModal('modal-order');
-    };
+    return `
+      <tr class="hover:bg-slate-700/40 transition border-b border-slate-700/50">
+        <td class="px-4 py-3">
+          <span class="font-bold text-white block text-sm">${o.producto_nombre}</span>
+          <span class="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5"><i data-lucide="user" class="w-3 h-3"></i> ${client.nombre} ${client.apellido}</span>
+        </td>
+        <td class="px-4 py-3">
+          <a href="${trackingChinaUrl}" target="_blank" class="text-blue-400 hover:text-blue-300 hover:underline font-mono text-xs flex items-center gap-1.5 transition">
+            <i data-lucide="external-link" class="w-3.5 h-3.5"></i> ${o.tracking_china}
+          </a>
+          <span class="text-[10px] text-slate-500 block mt-1 uppercase">Compra: ${o.fecha_compra || 'N/A'}</span>
+        </td>
+        <td class="px-4 py-3">
+          <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-700 text-slate-200 border border-slate-600 uppercase tracking-wide">${o.estado || 'Comprado en China'}</span>
+          ${o.caja_id ? `<span class="block text-[10px] text-amber-400 mt-1.5 font-medium"><i data-lucide="package" class="w-3 h-3 inline"></i> ${o.caja_id}</span>` : ''}
+        </td>
+        <td class="px-4 py-3">${semaforoHTML}</td>
+        <td class="px-4 py-3">
+          <span class="font-bold text-emerald-400 text-sm block">$${landedCost.toFixed(2)}</span>
+          ${costoEnvio > 0 ? `<span class="text-[10px] text-slate-400">P: $${precioProd} + E: $${costoEnvio}</span>` : ''}
+        </td>
+        <td class="px-4 py-3">${docLinkHTML}</td>
+        <td class="px-4 py-3 text-right">
+          <div class="flex items-center justify-end gap-1.5">
+            <button onclick="openOrderModal('${o.id}')" class="p-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg transition shadow" title="Editar Logística">
+              <i data-lucide="edit" class="w-4 h-4"></i>
+            </button>
+            <button onclick="deleteOrder('${o.id}')" class="p-2 bg-rose-500/20 hover:bg-rose-500/40 text-rose-400 rounded-lg transition shadow" title="Eliminar Encargo">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+  
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+};
 
-    window.handleOrderSubmit = async function(e) {
-      e.preventDefault();
-      const fileInput = document.getElementById('order-invoice-file');
-      let invoiceUrl = '';
+window.openOrderModal = function(orderId = null) {
+  const form = document.getElementById('form-order');
+  if (form) form.reset();
+  
+  document.getElementById('order-id').value = '';
+  document.getElementById('modal-order-title').innerText = 'Nuevo Encargo de Importación (China)';
+  document.getElementById('order-document-file').value = ''; 
+
+  // Poblar select de clientes
+  const select = document.getElementById('order-client-select');
+  if (select) {
+    select.innerHTML = db.clientes && db.clientes.length > 0 
+      ? db.clientes.map(c => `<option value="${c.id}">${c.nombre} ${c.apellido}</option>`).join('')
+      : '<option value="">-- No hay clientes registrados --</option>';
+  }
+
+  if (orderId) {
+    const o = db.encargos.find(item => item.id === orderId);
+    if (o) {
+      document.getElementById('modal-order-title').innerText = 'Actualizar Estado Logístico y Costos';
+      document.getElementById('order-id').value = o.id;
       
-      if (fileInput.files.length > 0) {
-        invoiceUrl = await uploadSupabaseStorageFile(fileInput.files[0], 'documentos');
-      }
-
-      const record = {
-        id: Date.now().toString(),
-        cliente_id: document.getElementById('order-client-select').value,
-        producto_nombre: document.getElementById('order-prod-name').value,
-        variante: document.getElementById('order-prod-variant').value,
-        cantidad: parseInt(document.getElementById('order-prod-qty').value),
-        proveedor: document.getElementById('order-supplier-name').value,
-        costo_fabrica: parseFloat(document.getElementById('order-factory-cost').value),
-        fecha_compra: document.getElementById('order-purchase-date').value,
-        factura_url: invoiceUrl,
-        ruta: document.getElementById('order-route').value,
-        tracking_origen: document.getElementById('order-tracking-orig').value,
-        tracking_inter: '',
-        estado: 'TRANSIT'
-      };
+      // China Data
+      document.getElementById('order-client-select').value = o.cliente_id || '';
+      document.getElementById('order-prod-name').value = o.producto_nombre || '';
+      document.getElementById('order-price').value = o.precio_producto || '';
+      document.getElementById('order-tracking-china').value = o.tracking_china || '';
+      document.getElementById('order-date-purchase').value = o.fecha_compra || '';
       
-      await syncInsert('encargos', record);
-      db.encargos.push(record);
-      closeModal('modal-order');
-      renderAll();
-    };
+      // CO -> VE Data (Nullable handling)
+      document.getElementById('order-status-dropdown').value = o.estado || 'Comprado en China';
+      document.getElementById('order-box-id').value = o.caja_id || '';
+      document.getElementById('order-date-co').value = o.fecha_llegada_co || '';
+      document.getElementById('order-date-leave-co').value = o.fecha_salida_co || '';
+      document.getElementById('order-date-ve').value = o.fecha_llegada_ve || '';
+      document.getElementById('order-shipping-cost').value = o.costo_envio || '';
+      document.getElementById('order-tracking-local').value = o.tracking_local || '';
+      document.getElementById('order-dimensions').value = o.dimensiones || '';
+      document.getElementById('order-weight').value = o.peso || '';
+    }
+  } else {
+    // Default a la fecha de hoy al crear nuevo
+    document.getElementById('order-date-purchase').value = new Date().toISOString().slice(0, 10);
+    document.getElementById('order-status-dropdown').value = 'Comprado en China';
+  }
 
-    window.openTrackingModal = function(orderId) {
-        const order = db.encargos.find(o => o.id === orderId);
-        if (!order) return;
-        
-        document.getElementById('inter-order-id').value = order.id;
-        document.getElementById('inter-tracking-code').value = order.tracking_inter || '';
-        document.getElementById('inter-freight-cost').value = '0.00';
+  const modal = document.getElementById('modal-order');
+  if (modal) modal.classList.remove('hidden');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+};
 
-        const trackingCode = order.tracking_inter || order.tracking_origen || '';
-        document.getElementById('btn-parcels-link').href = `https://parcelsapp.com/es/tracking/${trackingCode}`;
+window.handleOrderSubmit = async function(e) {
+  e.preventDefault();
+  const id = document.getElementById('order-id').value;
+  
+  // Procesamiento de Supabase Storage para Documentos
+  let documentoUrl = null;
+  const fileInput = document.getElementById('order-document-file');
+  
+  if (fileInput && fileInput.files && fileInput.files[0]) {
+    const file = fileInput.files[0];
+    // Se reutiliza tu función de subida existente
+    try {
+      const url = await uploadSupabaseStorageFile(file, 'documentos');
+      if (url) documentoUrl = url;
+    } catch (error) {
+      console.error("Error subiendo el documento:", error);
+    }
+  }
 
-        document.getElementById('tracking-iframe-label').innerText = order.tracking_inter ? `Guía: ${order.tracking_inter}` : 'Sin guía intermedia';
+  // Estructura del registro manejando los Nullables
+  const record = {
+    cliente_id: document.getElementById('order-client-select').value,
+    producto_nombre: document.getElementById('order-prod-name').value,
+    precio_producto: parseFloat(document.getElementById('order-price').value) || 0,
+    tracking_china: document.getElementById('order-tracking-china').value,
+    fecha_compra: document.getElementById('order-date-purchase').value,
+    
+    estado: document.getElementById('order-status-dropdown').value,
+    caja_id: document.getElementById('order-box-id').value || null,
+    fecha_llegada_co: document.getElementById('order-date-co').value || null,
+    fecha_salida_co: document.getElementById('order-date-leave-co').value || null,
+    fecha_llegada_ve: document.getElementById('order-date-ve').value || null,
+    costo_envio: parseFloat(document.getElementById('order-shipping-cost').value) || 0,
+    tracking_local: document.getElementById('order-tracking-local').value || null,
+    dimensiones: document.getElementById('order-dimensions').value || null,
+    peso: document.getElementById('order-weight').value || null,
+  };
 
-        openModal('modal-tracking');
-    };
+  // Solo sobreescribir la URL si se subió un nuevo archivo en este Submit
+  if (documentoUrl) {
+    record.documento_url = documentoUrl;
+  }
 
-    window.handleInterScaleSubmit = async function(e) {
-      e.preventDefault();
-      const orderId = document.getElementById('inter-order-id').value;
-      const trackingInter = document.getElementById('inter-tracking-code').value;
-      const freightCost = parseFloat(document.getElementById('inter-freight-cost').value) || 0;
+  if (id) {
+    await syncUpdate('encargos', id, record);
+    const idx = db.encargos.findIndex(o => o.id === id);
+    if (idx !== -1) {
+      db.encargos[idx] = { ...db.encargos[idx], ...record };
+    }
+  } else {
+    const newRecord = { id: Date.now().toString(), ...record };
+    await syncInsert('encargos', newRecord);
+    db.encargos.push(newRecord);
+  }
 
-      const order = db.encargos.find(o => o.id === orderId);
-      if (!order) return;
+  closeModal('modal-order');
+  renderOrders();
+};
 
-      order.tracking_inter = trackingInter;
-      await syncUpdate('encargos', order.id, { tracking_inter: trackingInter });
-
-      if (freightCost > 0) {
-        const expenseRecord = {
-          id: Date.now().toString(),
-          concepto: `Flete/Aduana adicional encargo ${order.producto_nombre}`,
-          categoria: 'Flete/Logística',
-          monto_usd: freightCost,
-          fecha: new Date().toISOString().slice(0,10)
-        };
-        await syncInsert('gastos', expenseRecord);
-        db.gastos.push(expenseRecord);
-      }
-
-      alert("Escala actualizada y costos registrados correctamente.");
-      closeModal('modal-tracking');
-      renderAll();
-    };
-
-    window.openLostModal = function(orderId) {
-      document.getElementById('form-lost').reset();
-      document.getElementById('lost-order-id').value = orderId;
-      openModal('modal-lost');
-    };
-
-    window.handleLostSubmit = async function(e) {
-      e.preventDefault();
-      const orderId = document.getElementById('lost-order-id').value;
-      const reason = document.getElementById('lost-reason').value;
-      const order = db.encargos.find(o => o.id === orderId);
-      if (!order) return;
-
-      order.estado = 'LOST';
-      await syncUpdate('encargos', order.id, { estado: 'LOST' });
-
-      // Registrar pérdida como gasto
-      const lossExpense = {
-        id: Date.now().toString(),
-        concepto: `Pérdida/Extravío encargo: ${order.producto_nombre} (${reason})`,
-        categoria: 'Pérdida/Extravío',
-        monto_usd: parseFloat(order.costo_fabrica) * parseInt(order.cantidad),
-        fecha: new Date().toISOString().slice(0,10)
-      };
-      
-      await syncInsert('gastos', lossExpense);
-      db.gastos.push(lossExpense);
-
-      closeModal('modal-lost');
-      renderAll();
-      alert("Encargo marcado como extraviado y pérdida registrada en gastos.");
-    };
-
-    window.deleteOrder = async function(id) {
-      if (confirm("¿Estás seguro de eliminar este encargo?")) {
-        await syncDelete('encargos', id);
-        db.encargos = db.encargos.filter(o => o.id !== id);
-        renderAll();
-      }
-    };
+window.deleteOrder = async function(id) {
+  if (confirm("¿Estás seguro de eliminar este encargo de importación de la base de datos?")) {
+    await syncDelete('encargos', id);
+    db.encargos = db.encargos.filter(o => o.id !== id);
+    renderOrders();
+  }
+};
 
     function populateDropdowns() {
       const clientSelects = [document.getElementById('order-client-select'), document.getElementById('sale-client-select')];
